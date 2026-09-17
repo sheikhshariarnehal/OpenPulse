@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -85,6 +86,28 @@ export async function POST(req: NextRequest) {
       clientIp: clientIp.split(',')[0].trim(),
       userAgent
     });
+
+    // Directly persist to Supabase PostgreSQL table telemetry_events
+    try {
+      await prisma.telemetryEventMirror.create({
+        data: {
+          id: recorded.id,
+          workspaceId: recorded.workspaceId,
+          appId: recorded.appId,
+          event: recorded.event,
+          distinctId: recorded.distinctId,
+          properties: JSON.stringify(recorded.properties || {}),
+          timestamp: new Date(recorded.timestamp),
+          latencyMs: recorded.latencyMs,
+          status: recorded.status,
+          shard: recorded.shard,
+          clientIp: recorded.clientIp,
+          userAgent: recorded.userAgent
+        }
+      });
+    } catch (e) {
+      // Non-blocking fallback
+    }
 
     return NextResponse.json(
       {

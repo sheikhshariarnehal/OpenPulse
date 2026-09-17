@@ -4,6 +4,15 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'OpenPulse — High-Velocity Developer Analytics & Telemetry',
   description: 'Self-hostable, privacy-first developer analytics and real-time telemetry platform with sub-millisecond ClickHouse ingestion.',
+  icons: {
+    icon: [
+      { url: '/icon.png' },
+      { url: '/favicon.ico' },
+    ],
+    apple: [
+      { url: '/icon.png' },
+    ],
+  },
 };
 
 export const viewport: Viewport = {

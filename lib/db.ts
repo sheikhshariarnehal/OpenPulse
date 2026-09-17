@@ -110,12 +110,25 @@ export interface AnalyticsReport {
 }
 
 // ---- File paths ----
-const DATA_DIR = path.join(process.cwd(), '.openpulse-data');
+// On Vercel (and other serverless runtimes) process.cwd() is read-only (/var/task).
+// Fall back to /tmp which is the only writable directory in serverless environments.
+const IS_SERVERLESS =
+  process.env.VERCEL === '1' ||
+  process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined ||
+  process.env.NETLIFY === 'true';
+
+const DATA_DIR = IS_SERVERLESS
+  ? '/tmp/openpulse-data'
+  : path.join(process.cwd(), '.openpulse-data');
 const DB_FILE = path.join(DATA_DIR, 'store.json');
 
 function ensureDataDir(): void {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+  } catch {
+    // Read-only filesystem — data will be in-memory only for this invocation
   }
 }
 
@@ -165,29 +178,40 @@ function getInitialDatabase(): DatabaseSchema {
   };
 }
 
+let memoryDb: DatabaseSchema | null = null;
+
 function readDb(): DatabaseSchema {
+  if (memoryDb) return memoryDb;
   ensureDataDir();
-  if (!fs.existsSync(DB_FILE)) {
-    const initial = getInitialDatabase();
-    writeDb(initial);
-    return initial;
-  }
   try {
+    if (!fs.existsSync(DB_FILE)) {
+      const initial = getInitialDatabase();
+      writeDb(initial);
+      memoryDb = initial;
+      return initial;
+    }
     const raw = fs.readFileSync(DB_FILE, 'utf-8');
     const parsed = JSON.parse(raw);
+    memoryDb = parsed;
     return parsed;
   } catch {
     const initial = getInitialDatabase();
-    writeDb(initial);
+    memoryDb = initial;
     return initial;
   }
 }
 
 function writeDb(data: DatabaseSchema): void {
-  ensureDataDir();
-  const tmp = DB_FILE + '.tmp';
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8');
-  fs.renameSync(tmp, DB_FILE);
+  memoryDb = data;
+  try {
+    ensureDataDir();
+    const tmp = DB_FILE + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8');
+    fs.renameSync(tmp, DB_FILE);
+  } catch {
+    // Serverless / read-only filesystem: writes are silently skipped.
+    // Persistent state is handled by Supabase/Prisma via the async mirror.
+  }
 }
 
 // ---- Helpers ----

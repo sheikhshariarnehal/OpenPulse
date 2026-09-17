@@ -488,48 +488,183 @@ OpenPulse.track("item_purchased", with: [
       ),
       installOptions: [
         {
-          title: 'Option 1: Gradle (Kotlin DSL)',
-          description: 'Add the OpenPulse dependency to your `app/build.gradle.kts` file:',
+          title: 'Zero-Dependency Integration (Recommended)',
+          description: 'No SDK library needed — copy `OpenPulseAnalytics.kt` into your `analytics/` package. Uses only Android\'s built-in `HttpURLConnection` and Kotlin coroutines (already in every Android project):',
           language: 'kotlin',
-          code: `dependencies {
-    implementation("io.openpulse:openpulse-android:1.2.0")
+          code: `package com.example.app.analytics
+
+import android.content.Context
+import android.os.Build
+import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import org.json.JSONObject
+import java.io.OutputStreamWriter
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.UUID
+
+object OpenPulseAnalytics {
+
+    private const val OPENPULSE_API_KEY = "${app.apiKey}"
+    private const val OPENPULSE_ENDPOINT = "${hostUrl}/api/ingest"
+    private const val PREFS_NAME = "openpulse_prefs"
+    private const val PREF_DISTINCT_ID = "distinct_id"
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var distinctId = "anon_android"
+    private var appVersion = ""
+    private var sdkInt = 0
+    private var deviceModel = ""
+    private var deviceManufacturer = ""
+
+    /** Call once from Application.onCreate() */
+    fun init(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        var id = prefs.getString(PREF_DISTINCT_ID, null)
+        if (id.isNullOrBlank()) {
+            id = "cs_android_" + UUID.randomUUID().toString().replace("-", "").take(12)
+            prefs.edit().putString(PREF_DISTINCT_ID, id).apply()
+        }
+        distinctId = id
+        appVersion = context.packageManager
+            .getPackageInfo(context.packageName, 0).versionName ?: ""
+        sdkInt = Build.VERSION.SDK_INT
+        deviceModel = Build.MODEL ?: "unknown"
+        deviceManufacturer = Build.MANUFACTURER ?: "unknown"
+
+        track("app_open", mapOf(
+            "version" to appVersion,
+            "android_sdk" to sdkInt,
+            "device_model" to "$deviceManufacturer $deviceModel",
+            "path" to "/app"
+        ))
+    }
+
+    fun track(event: String, properties: Map<String, Any?> = emptyMap()) {
+        scope.launch {
+            try {
+                val payload = JSONObject().apply {
+                    put("event", event)
+                    put("distinctId", distinctId)
+                    put("properties", JSONObject().apply {
+                        put("app", "MyApp")
+                        put("platform", "android")
+                        put("os", "Android")
+                        put("android_sdk", sdkInt)
+                        put("device", "$deviceManufacturer $deviceModel")
+                        put("app_version", appVersion)
+                        put("timestamp", java.time.Instant.now().toString())
+                        properties.forEach { (k, v) ->
+                            when (v) {
+                                null -> put(k, JSONObject.NULL)
+                                is Boolean -> put(k, v)
+                                is Int -> put(k, v)
+                                is Long -> put(k, v)
+                                is Float -> put(k, v.toDouble())
+                                is Double -> put(k, v)
+                                else -> put(k, v.toString())
+                            }
+                        }
+                    })
+                }
+                val url = URL(OPENPULSE_ENDPOINT)
+                val conn = url.openConnection() as HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.setRequestProperty("Content-Type", "application/json")
+                conn.setRequestProperty("X-OpenPulse-Key", OPENPULSE_API_KEY)
+                conn.doOutput = true
+                conn.connectTimeout = 5000
+                conn.readTimeout = 5000
+                OutputStreamWriter(conn.outputStream, Charsets.UTF_8).use { it.write(payload.toString()) }
+                conn.responseCode // trigger send
+                conn.disconnect()
+            } catch (_: Throwable) {
+                // Fail silently — never degrade user experience
+            }
+        }
+    }
+
+    fun trackScreen(screen: String) = track("\$screen_view", mapOf("screen" to screen, "path" to "/$screen"))
+
+    fun trackError(type: String, message: String?) = track("error_thrown", mapOf(
+        "error_type" to type, "message" to (message ?: "unknown"), "path" to "/app"
+    ))
+
+    fun trackHeartbeat(screen: String = "/app") = track("\$heartbeat", mapOf("path" to screen))
 }`,
+        },
+        {
+          title: 'Internet Permission (AndroidManifest.xml)',
+          description: 'Make sure your `AndroidManifest.xml` has internet permission (most apps already do):',
+          language: 'xml',
+          code: `<uses-permission android:name="android.permission.INTERNET" />`,
         },
       ],
       usage: {
-        description: 'Initialize OpenPulse in your `Application` class `onCreate` method:',
+        description: 'Call `OpenPulseAnalytics.init(this)` in your `Application.onCreate()`. This fires the initial `app_open` event and caches a persistent anonymous install ID:',
         language: 'kotlin',
-        filename: 'MainApplication.kt',
+        filename: 'MyApplication.kt',
         code: `package com.example.app
 
 import android.app.Application
-import io.openpulse.android.OpenPulse
-import io.openpulse.android.OpenPulseOptions
+import com.example.app.analytics.OpenPulseAnalytics
 
-class MainApplication : Application() {
+class MyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        OpenPulse.initialize(
-            context = this,
-            appKey = "${app.apiKey}",
-            options = OpenPulseOptions(host = "${hostUrl}")
-        )
+        // Initializes OpenPulse — fires app_open event, stores anonymous install ID
+        OpenPulseAnalytics.init(this)
+
+        // Optional: auto-report uncaught exceptions
+        val default = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            OpenPulseAnalytics.trackError(
+                type = throwable.javaClass.simpleName,
+                message = throwable.message
+            )
+            default?.uncaughtException(thread, throwable)
+        }
     }
 }`,
       },
       tracking: {
-        description: 'Record custom user events across activities and Jetpack Compose screens:',
+        description: 'Track screen navigation, media playback, searches, and custom business events anywhere in your Activities or Fragments:',
         language: 'kotlin',
-        code: `// Track screen or feature engagement
-OpenPulse.trackEvent(
-    eventName = "stream_started",
-    properties = mapOf(
-        "media_id" to "m_8819",
-        "quality" to "1080p",
-        "audio_lang" to "en"
-    )
-)`,
+        filename: 'HomeActivity.kt',
+        code: `import com.example.app.analytics.OpenPulseAnalytics
+
+// 1. Track screen navigation
+OpenPulseAnalytics.trackScreen("home")
+OpenPulseAnalytics.trackScreen("player")
+
+// 2. Track video / content playback
+OpenPulseAnalytics.track("video_play", mapOf(
+    "title" to "Inception",
+    "provider" to "SuperStream",
+    "quality" to "1080p",
+    "path" to "/player"
+))
+
+// 3. Track search queries
+OpenPulseAnalytics.track("search_query", mapOf(
+    "query" to "action movies",
+    "results_count" to 42,
+    "path" to "/search"
+))
+
+// 4. Track extension/plugin installation
+OpenPulseAnalytics.track("extension_installed", mapOf(
+    "extension_name" to "SuperStream",
+    "version" to 5,
+    "path" to "/extensions"
+))
+
+// 5. Periodic active-user heartbeat (call every ~25 seconds for Realtime Users)
+OpenPulseAnalytics.trackHeartbeat("/home")`,
       },
     },
 

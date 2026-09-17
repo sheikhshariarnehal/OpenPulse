@@ -3,6 +3,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { prisma } from './prisma';
 import { clickhouse, pingClickHouse } from './clickhouse';
+import { supabase } from './supabase';
 
 export interface User {
   id: string;
@@ -77,6 +78,14 @@ export interface UserSummary {
   browser: string;
 }
 
+export interface RealtimeData {
+  activeUsers: number;
+  activePages: TopEntry[];
+  activeCountries: TopEntry[];
+  activeDevices: TopEntry[];
+  recentEventsCount: number;
+}
+
 export interface AnalyticsReport {
   totalEvents: number;
   uniqueVisitors: number;
@@ -87,12 +96,17 @@ export interface AnalyticsReport {
   eventsPerSession: string;
   chartData: DayBucket[];
   topPages: TopEntry[];
+  topRoutes: TopEntry[];
+  topHostnames: TopEntry[];
   topEvents: TopEntry[];
   topCountries: TopEntry[];
+  topDevices: TopEntry[];
   topBrowsers: TopEntry[];
   topOS: TopEntry[];
   topReferrers: TopEntry[];
+  topUtm: TopEntry[];
   newVsReturning: { new: number; returning: number };
+  realtime: RealtimeData;
 }
 
 // ---- File paths ----
@@ -178,7 +192,9 @@ function writeDb(data: DatabaseSchema): void {
 
 // ---- Helpers ----
 function parseBrowser(ua: string = '', props: Record<string, any> = {}): string {
-  const src = props.browser || ua;
+  if (props.browser) return props.browser;
+  const src = ua;
+  if (src.includes('CloudStream')) return 'CloudStream Desktop';
   if (src.includes('Edge') || src.includes('Edg')) return 'Edge';
   if (src.includes('Firefox')) return 'Firefox';
   if (src.includes('Safari') && !src.includes('Chrome')) return 'Safari';
@@ -188,13 +204,22 @@ function parseBrowser(ua: string = '', props: Record<string, any> = {}): string 
 }
 
 function parseOS(ua: string = '', props: Record<string, any> = {}): string {
-  const src = props.os || ua;
+  if (props.os) return props.os;
+  const src = ua;
   if (src.includes('Android')) return 'Android';
   if (src.includes('iPhone') || src.includes('iOS')) return 'iOS';
   if (src.includes('Windows')) return 'Windows';
   if (src.includes('Macintosh') || src.includes('Mac OS')) return 'macOS';
   if (src.includes('Linux')) return 'Linux';
   return 'Other';
+}
+
+function parseDevice(ua: string = '', props: Record<string, any> = {}): string {
+  if (props.device) return props.device;
+  const src = (props.platform || ua || '').toLowerCase();
+  if (src.includes('tablet') || src.includes('ipad')) return 'Tablet';
+  if (src.includes('mobile') || src.includes('android') || src.includes('iphone')) return 'Mobile';
+  return 'Desktop';
 }
 
 function topN(counts: Record<string, number>, total: number, n = 10): TopEntry[] {
@@ -235,6 +260,26 @@ export const db = {
     data.workspaces.push(defaultWorkspace);
     data.apps.push(defaultApp);
     writeDb(data);
+
+    // Sync to Supabase Cloud PostgreSQL
+    prisma.user.upsert({
+      where: { id: user.id },
+      update: { name: user.name, passwordHash: user.passwordHash },
+      create: { id: user.id, email: user.email, name: user.name, passwordHash: user.passwordHash, systemRole: 'user', createdAt: new Date(user.createdAt) }
+    }).then(() => {
+      prisma.workspace.upsert({
+        where: { id: defaultWorkspace.id },
+        update: { name: defaultWorkspace.name, slug: defaultWorkspace.slug },
+        create: { id: defaultWorkspace.id, name: defaultWorkspace.name, slug: defaultWorkspace.slug, tier: defaultWorkspace.tier, ownerId: user.id, createdAt: new Date(defaultWorkspace.createdAt) }
+      }).then(() => {
+        prisma.appProject.upsert({
+          where: { id: defaultApp.id },
+          update: { name: defaultApp.name },
+          create: { id: defaultApp.id, workspaceId: defaultWorkspace.id, name: defaultApp.name, platform: defaultApp.platform, framework: defaultApp.framework, apiKey: defaultApp.apiKey, createdAt: new Date(defaultApp.createdAt) }
+        }).catch(() => {});
+      }).catch(() => {});
+    }).catch(() => {});
+
     return { user, defaultWorkspace, defaultApp };
   },
 
@@ -264,6 +309,16 @@ export const db = {
     const ws: Workspace = { id: 'ws_' + crypto.randomBytes(4).toString('hex'), name, slug: finalSlug, tier, ownerId: userId, createdAt: new Date().toISOString() };
     data.workspaces.push(ws);
     writeDb(data);
+
+    // Sync to Supabase Cloud PostgreSQL
+    prisma.workspace.upsert({
+      where: { id: ws.id },
+      update: { name: ws.name, slug: ws.slug, tier: ws.tier },
+      create: { id: ws.id, name: ws.name, slug: ws.slug, tier: ws.tier, ownerId: ws.ownerId, createdAt: new Date(ws.createdAt) }
+    }).catch(err => {
+      console.error('[Supabase Workspace Sync Error]:', err?.message || err);
+    });
+
     return ws;
   },
 
@@ -285,6 +340,16 @@ export const db = {
     const app: AppProject = { id: 'app_' + crypto.randomBytes(4).toString('hex'), workspaceId, name, platform, framework, apiKey: 'op_live_' + crypto.randomBytes(16).toString('hex'), createdAt: new Date().toISOString() };
     data.apps.push(app);
     writeDb(data);
+
+    // Sync to Supabase Cloud PostgreSQL
+    prisma.appProject.upsert({
+      where: { id: app.id },
+      update: { name: app.name, platform: app.platform, framework: app.framework, apiKey: app.apiKey },
+      create: { id: app.id, workspaceId: app.workspaceId, name: app.name, platform: app.platform, framework: app.framework, apiKey: app.apiKey, createdAt: new Date(app.createdAt) }
+    }).catch(err => {
+      console.error('[Supabase App Sync Error]:', err?.message || err);
+    });
+
     return app;
   },
 
@@ -294,6 +359,12 @@ export const db = {
     data.apps = data.apps.filter(a => a.id !== appId);
     if (data.apps.length === before) return false;
     writeDb(data);
+
+    // Sync to Supabase Cloud PostgreSQL
+    prisma.appProject.delete({
+      where: { id: appId }
+    }).catch(() => {});
+
     return true;
   },
 
@@ -335,7 +406,7 @@ export const db = {
       }
     }).catch(() => {});
 
-    // Asynchronously mirror to PostgreSQL Prisma if reachable
+    // Asynchronously mirror to Supabase PostgreSQL Prisma if reachable
     prisma.telemetryEventMirror.create({
       data: {
         id: newEvent.id,
@@ -351,7 +422,9 @@ export const db = {
         clientIp: newEvent.clientIp,
         userAgent: newEvent.userAgent
       }
-    }).catch(() => {});
+    }).catch(err => {
+      console.error('[Supabase Prisma Mirror Error]:', err?.message || err);
+    });
 
     return newEvent;
   },
@@ -401,7 +474,7 @@ export const db = {
     const totalSessions = Math.ceil(uniqueVisitors * 1.4);
 
     // Pageviews
-    const pageviews = events.filter(e => e.event === '$pageview' || e.event === '$screen_view' || e.properties?.path).length;
+    const pageviews = events.filter(e => e.event === '$pageview' || e.event === '$screen_view' || Boolean(e.properties?.path) || Boolean(e.properties?.screen)).length;
 
     // Chart data by day
     const chartData: DayBucket[] = [];
@@ -422,15 +495,17 @@ export const db = {
         date: dayStart.toISOString().split('T')[0],
         visitors: dayVisitors,
         sessions: Math.ceil(dayVisitors * 1.4),
-        pageviews: dayEvts.filter(e => e.event === '$pageview' || e.event === '$screen_view').length
+        pageviews: dayEvts.filter(e => e.event === '$pageview' || e.event === '$screen_view' || Boolean(e.properties?.path) || Boolean(e.properties?.screen)).length
       });
     }
 
     // Top pages
     const pageCounts: Record<string, number> = {};
     events.forEach(e => {
-      const pg = e.properties?.path || e.properties?.screen || '/';
-      pageCounts[pg] = (pageCounts[pg] || 0) + 1;
+      const pg = e.properties?.path || e.properties?.screen || (e.event === '$screen_view' ? '/home' : null);
+      if (pg) {
+        pageCounts[pg] = (pageCounts[pg] || 0) + 1;
+      }
     });
 
     // Top events
@@ -440,7 +515,7 @@ export const db = {
     // Countries
     const countryCounts: Record<string, number> = {};
     events.forEach(e => {
-      const c = e.properties?.country || 'Unknown';
+      const c = e.properties?.country || (e.clientIp === '127.0.0.1' || e.clientIp === '::1' ? 'Bangladesh' : 'Unknown');
       countryCounts[c] = (countryCounts[c] || 0) + 1;
     });
 
@@ -479,6 +554,76 @@ export const db = {
       ? `${Math.floor(avgDurationSecs / 60)}m ${avgDurationSecs % 60}s`
       : `${avgDurationSecs}s`;
 
+    // Top routes
+    const routeCounts: Record<string, number> = {};
+    events.forEach(e => {
+      let pg = e.properties?.path || e.properties?.screen || (e.event === '$screen_view' ? '/home' : '/');
+      if (pg.startsWith('/')) {
+        const parts = pg.split('?')[0].split('/').filter(Boolean);
+        const route = parts.length === 0 ? '/' : '/' + parts.map((p: string) => (p.startsWith('app_') || p.startsWith('ws_') || p.startsWith('usr_') || p.startsWith('cs_') ? '[id]' : p)).join('/');
+        routeCounts[route] = (routeCounts[route] || 0) + 1;
+      } else {
+        routeCounts['/' + pg] = (routeCounts['/' + pg] || 0) + 1;
+      }
+    });
+
+    // Top hostnames
+    const hostCounts: Record<string, number> = {};
+    events.forEach(e => {
+      const h = e.properties?.hostname || e.properties?.host || 'localhost:3000';
+      hostCounts[h] = (hostCounts[h] || 0) + 1;
+    });
+
+    // Top UTM
+    const utmCounts: Record<string, number> = {};
+    events.forEach(e => {
+      const u = e.properties?.utm_source || e.properties?.utm || e.properties?.campaign || 'direct';
+      utmCounts[u] = (utmCounts[u] || 0) + 1;
+    });
+
+    // Top Devices
+    const deviceCounts: Record<string, number> = {};
+    events.forEach(e => {
+      const d = parseDevice(e.userAgent, e.properties);
+      deviceCounts[d] = (deviceCounts[d] || 0) + 1;
+    });
+
+    // Real-time active users (events in last 2 minutes)
+    const realtimeCutoffMs = Date.now() - 2 * 60 * 1000;
+    let realtimeEvts = data.events.filter(e =>
+      e.workspaceId === workspaceId &&
+      new Date(e.timestamp).getTime() >= realtimeCutoffMs
+    );
+    if (options.appId) realtimeEvts = realtimeEvts.filter(e => e.appId === options.appId);
+
+    const realtimeActiveUsers = new Set(realtimeEvts.map(e => e.distinctId)).size;
+
+    const realtimePageCounts: Record<string, number> = {};
+    realtimeEvts.forEach(e => {
+      const pg = e.properties?.path || e.properties?.screen || (e.event === '$screen_view' ? '/home' : null);
+      if (pg) realtimePageCounts[pg] = (realtimePageCounts[pg] || 0) + 1;
+    });
+
+    const realtimeCountryCounts: Record<string, number> = {};
+    realtimeEvts.forEach(e => {
+      const c = e.properties?.country || (e.clientIp === '127.0.0.1' || e.clientIp === '::1' ? 'Bangladesh' : 'Unknown');
+      realtimeCountryCounts[c] = (realtimeCountryCounts[c] || 0) + 1;
+    });
+
+    const realtimeDeviceCounts: Record<string, number> = {};
+    realtimeEvts.forEach(e => {
+      const d = parseDevice(e.userAgent, e.properties);
+      realtimeDeviceCounts[d] = (realtimeDeviceCounts[d] || 0) + 1;
+    });
+
+    const realtime: RealtimeData = {
+      activeUsers: realtimeActiveUsers,
+      activePages: topN(realtimePageCounts, Math.max(realtimeEvts.length, 1)),
+      activeCountries: topN(realtimeCountryCounts, Math.max(realtimeEvts.length, 1)),
+      activeDevices: topN(realtimeDeviceCounts, Math.max(realtimeEvts.length, 1)),
+      recentEventsCount: realtimeEvts.length,
+    };
+
     return {
       totalEvents,
       uniqueVisitors,
@@ -489,12 +634,55 @@ export const db = {
       eventsPerSession: totalSessions > 0 ? (totalEvents / totalSessions).toFixed(1) : '0',
       chartData,
       topPages: topN(pageCounts, totalEvents),
+      topRoutes: topN(routeCounts, totalEvents),
+      topHostnames: topN(hostCounts, totalEvents),
       topEvents: topN(evtCounts, totalEvents),
       topCountries: topN(countryCounts, totalEvents),
+      topDevices: topN(deviceCounts, totalEvents),
       topBrowsers: topN(browserCounts, totalEvents),
       topOS: topN(osCounts, totalEvents),
       topReferrers: topN(refCounts, totalEvents),
-      newVsReturning: { new: newUsers, returning: returningUsers }
+      topUtm: topN(utmCounts, totalEvents),
+      newVsReturning: { new: newUsers, returning: returningUsers },
+      realtime
+    };
+  },
+
+  getRealtimeActiveUsers(workspaceId: string, appId?: string): RealtimeData {
+    const data = readDb();
+    const cutoff2m = Date.now() - 2 * 60 * 1000;
+    let evts = data.events.filter(e =>
+      e.workspaceId === workspaceId &&
+      new Date(e.timestamp).getTime() >= cutoff2m
+    );
+    if (appId) evts = evts.filter(e => e.appId === appId);
+
+    const activeUsers = new Set(evts.map(e => e.distinctId)).size;
+
+    const pageCounts: Record<string, number> = {};
+    evts.forEach(e => {
+      const pg = e.properties?.path || e.properties?.screen || (e.event === '$screen_view' ? '/home' : null);
+      if (pg) pageCounts[pg] = (pageCounts[pg] || 0) + 1;
+    });
+
+    const countryCounts: Record<string, number> = {};
+    evts.forEach(e => {
+      const c = e.properties?.country || (e.clientIp === '127.0.0.1' || e.clientIp === '::1' ? 'Bangladesh' : 'Unknown');
+      countryCounts[c] = (countryCounts[c] || 0) + 1;
+    });
+
+    const deviceCounts: Record<string, number> = {};
+    evts.forEach(e => {
+      const d = parseDevice(e.userAgent, e.properties);
+      deviceCounts[d] = (deviceCounts[d] || 0) + 1;
+    });
+
+    return {
+      activeUsers,
+      activePages: topN(pageCounts, Math.max(evts.length, 1)),
+      activeCountries: topN(countryCounts, Math.max(evts.length, 1)),
+      activeDevices: topN(deviceCounts, Math.max(evts.length, 1)),
+      recentEventsCount: evts.length
     };
   },
 
@@ -540,4 +728,5 @@ export const db = {
   // ── Database Client Instances ──────────────────────────────────────
   prisma,
   clickhouse,
+  supabase,
 };

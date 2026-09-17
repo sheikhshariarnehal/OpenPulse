@@ -9,6 +9,7 @@
 # Production build
 /build
 /dist
+*.tsbuildinfo
 
 # Environment variables & secrets
 .env

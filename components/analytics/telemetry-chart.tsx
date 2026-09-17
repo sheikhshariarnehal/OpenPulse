@@ -12,10 +12,6 @@ export function TelemetryChart({ initialEvents = [], workspaceSlug }: TelemetryC
   const [range, setRange] = useState<'1h' | '24h' | '7d' | '30d'>('24h');
   const [events, setEvents] = useState<{ timestamp: string }[]>(initialEvents);
 
-  useEffect(() => {
-    setEvents(initialEvents);
-  }, [initialEvents]);
-
   // Poll for latest events if workspaceSlug is provided
   useEffect(() => {
     if (!workspaceSlug) return;
@@ -24,11 +20,14 @@ export function TelemetryChart({ initialEvents = [], workspaceSlug }: TelemetryC
         const res = await fetch(`/api/analytics/events?workspace=${workspaceSlug}&limit=1000`);
         const data = await res.json();
         if (data.events) {
-          setEvents(data.events);
+          setEvents(prev => {
+            if (prev.length === data.events.length) return prev;
+            return data.events;
+          });
         }
       } catch {}
     };
-    const timer = setInterval(fetchLatest, 4000);
+    const timer = setInterval(fetchLatest, 5000);
     return () => clearInterval(timer);
   }, [workspaceSlug]);
 

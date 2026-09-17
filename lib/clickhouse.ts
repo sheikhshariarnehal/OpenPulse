@@ -1,4 +1,4 @@
-import { createClient, ClickHouseClient } from '@clickhouse/client';
+import { createClient, ClickHouseClient, ClickHouseLogLevel } from '@clickhouse/client';
 
 const globalForClickHouse = globalThis as unknown as {
   clickhouse: ClickHouseClient | undefined;
@@ -16,7 +16,10 @@ export const clickhouse =
     database: database,
     username: username,
     password: password,
-    request_timeout: 10000,
+    request_timeout: 5000,
+    log: {
+      level: ClickHouseLogLevel.OFF,
+    },
   });
 
 if (process.env.NODE_ENV !== 'production') {
@@ -27,6 +30,9 @@ if (process.env.NODE_ENV !== 'production') {
  * Initializes ClickHouse database and columnar analytics tables matching DATABASE.md
  */
 export async function initClickHouseSchema(): Promise<boolean> {
+  const isAlive = await pingClickHouse();
+  if (!isAlive) return false;
+
   try {
     // 1. Create database
     await clickhouse.command({
@@ -79,18 +85,20 @@ export async function initClickHouseSchema(): Promise<boolean> {
 
     return true;
   } catch (err) {
-    console.warn('[ClickHouse] Schema initialization skipped (server offline or starting up):', (err as any).message);
     return false;
   }
 }
 
 /**
- * Test connectivity to ClickHouse
+ * Safe test connectivity to ClickHouse via lightweight HTTP ping
  */
 export async function pingClickHouse(): Promise<boolean> {
   try {
-    const res = await clickhouse.ping();
-    return res.success;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 400);
+    const res = await fetch(`${host}/ping`, { signal: controller.signal }).catch(() => null);
+    clearTimeout(timeout);
+    return res ? res.ok : false;
   } catch {
     return false;
   }

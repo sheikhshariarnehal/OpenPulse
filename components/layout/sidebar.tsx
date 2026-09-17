@@ -15,7 +15,9 @@ import {
   LogOut,
   AppWindow,
   BarChart2,
-  Users
+  Users,
+  CreditCard,
+  Sun
 } from 'lucide-react';
 
 interface Workspace {
@@ -44,6 +46,7 @@ export function DashboardSidebar({
   const router = useRouter();
 
   const [wsPopoverOpen, setWsPopoverOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [createWsModalOpen, setCreateWsModalOpen] = useState(false);
   const [newWsName, setNewWsName] = useState('');
   const [newWsSlug, setNewWsSlug] = useState('');
@@ -83,6 +86,23 @@ export function DashboardSidebar({
     }
   }
 
+  function getUserInitials(name: string) {
+    if (!name) return 'U';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  }
+
+  function formatTier(tier?: string) {
+    if (!tier) return 'Hobby';
+    if (tier === 'Dedicated ClickHouse' || tier.toLowerCase().includes('clickhouse')) return 'Hobby';
+    if (tier.toLowerCase().includes('enterprise')) return 'Enterprise';
+    if (tier.toLowerCase().includes('pro')) return 'Pro';
+    return tier;
+  }
+
   return (
     <>
       <aside className="sidebar">
@@ -91,15 +111,14 @@ export function DashboardSidebar({
           <button
             onClick={() => setWsPopoverOpen(!wsPopoverOpen)}
             className="ws-switcher-trigger"
+            aria-label="Switch workspace"
           >
-            <div className="ws-avatar">
-              <Activity style={{ width: '15px', height: '15px' }} />
+            <div className="ws-avatar" />
+            <span className="ws-name">{currentWorkspace?.name || 'Workspace'}</span>
+            <div className="ws-right">
+              <span className="ws-badge">{formatTier(currentWorkspace?.tier)}</span>
+              <ChevronsUpDown className="ws-chevrons" style={{ width: '13px', height: '13px' }} />
             </div>
-            <div className="ws-meta">
-              <span className="ws-name">{currentWorkspace?.name || 'Workspace'}</span>
-              <span className="ws-tier">{currentWorkspace?.tier || 'Pro Plan'}</span>
-            </div>
-            <ChevronsUpDown className="ws-chevrons" style={{ width: '14px', height: '14px' }} />
           </button>
 
           {/* Popover Dropdown */}
@@ -120,13 +139,12 @@ export function DashboardSidebar({
                       onClick={() => setWsPopoverOpen(false)}
                       className={`ws-item ${isActive ? 'active' : ''}`}
                     >
-                      <div className="ws-item-badge">
-                        {ws.name.substring(0, 2).toUpperCase()}
-                      </div>
+                      <div className="ws-item-badge" />
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                         {ws.name}
                       </span>
-                      {isActive && <Check style={{ width: '14px', height: '14px', color: '#38bdf8' }} />}
+                      <span className="ws-badge" style={{ fontSize: '10px', padding: '1px 6px' }}>{formatTier(ws.tier)}</span>
+                      {isActive && <Check style={{ width: '13px', height: '13px', color: '#38bdf8', marginLeft: '2px' }} />}
                     </Link>
                   );
                 })}
@@ -240,30 +258,66 @@ export function DashboardSidebar({
 
         {/* Sidebar Footer */}
         <div className="sidebar-footer">
-          <div className="cluster-status-pill">
-            <div className="status-indicator">
-              <span className="status-dot" />
-              <span>ClickHouse Cluster</span>
-            </div>
-            <span className="mono" style={{ fontSize: '10px', color: '#10b981' }}>8/8 UP</span>
-          </div>
+          {userMenuOpen && (
+            <>
+              <div
+                style={{ position: 'fixed', inset: 0, zIndex: 40 }}
+                onClick={() => setUserMenuOpen(false)}
+              />
+              <div className="user-menu-popover">
+                <div className="user-menu-header">
+                  <div className="user-menu-header-info">
+                    <span className="user-menu-signed-label">Signed in as</span>
+                    <span className="user-menu-email-text">{user.email}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="user-menu-icon-btn"
+                    title="Theme"
+                  >
+                    <Sun style={{ width: '13px', height: '13px' }} />
+                  </button>
+                </div>
 
-          <div className="user-profile-row">
-            <div className="user-avatar">
-              {user.name.substring(0, 2).toUpperCase()}
+                <div className="user-menu-divider" />
+
+                <Link
+                  href={`/${currentSlug}/settings`}
+                  onClick={() => setUserMenuOpen(false)}
+                  className="user-menu-item"
+                >
+                  <CreditCard style={{ width: '14px', height: '14px' }} />
+                  <span>Billing & Profile</span>
+                </Link>
+
+                <div className="user-menu-divider" />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUserMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="user-menu-item user-menu-logout"
+                >
+                  <LogOut style={{ width: '14px', height: '14px' }} />
+                  <span>Sign out</span>
+                </button>
+              </div>
+            </>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setUserMenuOpen(!userMenuOpen)}
+            className={`user-profile-trigger ${userMenuOpen ? 'active' : ''}`}
+            aria-label="User menu"
+          >
+            <div className="user-avatar-gradient">
+              {getUserInitials(user.name)}
             </div>
-            <div className="user-details">
-              <span className="user-name-text">{user.name}</span>
-              <span className="user-email-text">{user.email}</span>
-            </div>
-            <button
-              onClick={handleLogout}
-              title="Sign Out"
-              style={{ background: 'none', border: 'none', color: '#71717a', cursor: 'pointer', padding: '4px' }}
-            >
-              <LogOut style={{ width: '14px', height: '14px' }} />
-            </button>
-          </div>
+            <span className="user-profile-name">{user.name}</span>
+          </button>
         </div>
       </aside>
 

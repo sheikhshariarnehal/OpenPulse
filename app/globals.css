@@ -119,61 +119,70 @@ input, select {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  background: #121215;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  gap: 8px;
+  padding: 6px 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
   color: var(--foreground);
   cursor: pointer;
   text-align: left;
   transition: all 0.15s ease;
+  user-select: none;
 }
 
 .ws-switcher-trigger:hover {
   background: #18181b;
-  border-color: #3f3f46;
 }
 
 .ws-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  background: #18181b;
-  border: 1px solid #27272a;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #38bdf8;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
   flex-shrink: 0;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.4);
-}
-
-.ws-meta {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .ws-name {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 600;
-  color: #fafafa;
+  color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   letter-spacing: -0.01em;
+  flex: 1;
+  min-width: 0;
 }
 
-.ws-tier {
+.ws-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ws-badge {
   font-size: 11px;
-  color: var(--muted-foreground);
+  font-weight: 500;
+  color: #d4d4d8;
+  background: #27272a;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .ws-chevrons {
   color: #71717a;
   flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.ws-switcher-trigger:hover .ws-chevrons {
+  color: #a1a1aa;
 }
 
 .ws-popover {
@@ -224,16 +233,17 @@ input, select {
 }
 
 .ws-item-badge {
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 9.5px;
   font-weight: 700;
-  background: #27272a;
+  background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
   color: #fafafa;
+  flex-shrink: 0;
 }
 
 .ws-divider {
@@ -339,90 +349,154 @@ input, select {
 
 .sidebar-footer {
   margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  position: relative;
   border-top: 1px solid var(--border);
-  padding-top: 10px;
+  padding-top: 8px;
 }
 
-.cluster-status-pill {
+.user-profile-trigger {
+  width: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 5px 8px;
-  background: #121215;
-  border: 1px solid var(--border);
+  gap: 10px;
+  padding: 6px 8px;
   border-radius: 6px;
-  font-size: 11px;
-  color: #71717a;
-}
-
-.status-indicator {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #fafafa;
-  font-weight: 500;
-}
-
-.status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 6px #10b981;
-}
-
-.user-profile-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 6px;
-  border-radius: 6px;
+  background: transparent;
+  border: 1px solid transparent;
   cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+  user-select: none;
 }
 
-.user-profile-row:hover {
+.user-profile-trigger:hover,
+.user-profile-trigger.active {
   background: #18181b;
 }
 
-.user-avatar {
-  width: 26px;
-  height: 26px;
+.user-avatar-gradient {
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: #27272a;
-  border: 1px solid #3f3f46;
+  background: linear-gradient(135deg, #4f46e5 0%, #db2777 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 10.5px;
-  font-weight: 600;
-  color: #fafafa;
+  font-weight: 700;
+  color: #ffffff;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  letter-spacing: -0.02em;
 }
 
-.user-details {
+.user-profile-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #fafafa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+  flex: 1;
+}
+
+.user-menu-popover {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #0c0c0e;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  z-index: 80;
+  padding: 4px;
+  animation: fadeIn 0.12s ease-out;
+}
+
+.user-menu-header {
+  padding: 8px 10px 6px 10px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.user-menu-header-info {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
-.user-name-text {
+.user-menu-signed-label {
+  font-size: 11px;
+  color: #a1a1aa;
+  margin-bottom: 2px;
+}
+
+.user-menu-email-text {
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   color: #fafafa;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.user-email-text {
-  font-size: 10px;
-  color: #71717a;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.user-menu-icon-btn {
+  background: transparent;
+  border: none;
+  color: #a1a1aa;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+}
+
+.user-menu-icon-btn:hover {
+  color: #fafafa;
+}
+
+.user-menu-divider {
+  height: 1px;
+  background: #27272a;
+  margin: 4px 0;
+}
+
+.user-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: #e4e4e7;
+  font-size: 12.5px;
+  text-decoration: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s, color 0.12s;
+}
+
+.user-menu-item:hover {
+  background: #18181b;
+  color: #ffffff;
+}
+
+.user-menu-logout {
+  color: #e4e4e7;
+}
+
+.user-menu-logout:hover {
+  background: #18181b;
+  color: #f43f5e;
 }
 
 /* -------------------------------------------------------------

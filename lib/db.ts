@@ -139,9 +139,9 @@ function hashPassword(password: string): string {
 
 
 function getInitialDatabase(): DatabaseSchema {
-  const adminId = 'usr_' + crypto.randomBytes(4).toString('hex');
-  const defaultWsId = 'ws_' + crypto.randomBytes(4).toString('hex');
-  const defaultAppId = 'app_' + crypto.randomBytes(4).toString('hex');
+  const adminId = 'usr_admin_default';
+  const defaultWsId = 'ws_cloudstream_7283';
+  const defaultAppId = 'app_cloudstream_prod';
 
   const defaultUser: User = {
     id: adminId,
@@ -153,8 +153,8 @@ function getInitialDatabase(): DatabaseSchema {
 
   const defaultWs: Workspace = {
     id: defaultWsId,
-    name: 'Acme Corp',
-    slug: 'acme-corp',
+    name: 'CloudStream',
+    slug: 'cloudstream-7283',
     tier: 'Enterprise Dedicated',
     ownerId: adminId,
     createdAt: new Date().toISOString()
@@ -163,10 +163,10 @@ function getInitialDatabase(): DatabaseSchema {
   const defaultApp: AppProject = {
     id: defaultAppId,
     workspaceId: defaultWsId,
-    name: 'CloudStream Desktop',
-    platform: 'desktop',
-    framework: 'tauri',
-    apiKey: 'op_live_' + crypto.randomBytes(16).toString('hex'),
+    name: 'CloudStream App',
+    platform: 'android',
+    framework: 'kotlin',
+    apiKey: 'op_live_931be7475138b7a5888fd00589f5567c',
     createdAt: new Date().toISOString()
   };
 

@@ -315,7 +315,7 @@ export const db = {
       where: { id: ws.id },
       update: { name: ws.name, slug: ws.slug, tier: ws.tier },
       create: { id: ws.id, name: ws.name, slug: ws.slug, tier: ws.tier, ownerId: ws.ownerId, createdAt: new Date(ws.createdAt) }
-    }).catch(err => {
+    }).catch((err: any) => {
       console.error('[Supabase Workspace Sync Error]:', err?.message || err);
     });
 
@@ -346,7 +346,7 @@ export const db = {
       where: { id: app.id },
       update: { name: app.name, platform: app.platform, framework: app.framework, apiKey: app.apiKey },
       create: { id: app.id, workspaceId: app.workspaceId, name: app.name, platform: app.platform, framework: app.framework, apiKey: app.apiKey, createdAt: new Date(app.createdAt) }
-    }).catch(err => {
+    }).catch((err: any) => {
       console.error('[Supabase App Sync Error]:', err?.message || err);
     });
 
@@ -422,7 +422,7 @@ export const db = {
         clientIp: newEvent.clientIp,
         userAgent: newEvent.userAgent
       }
-    }).catch(err => {
+    }).catch((err: any) => {
       console.error('[Supabase Prisma Mirror Error]:', err?.message || err);
     });
 

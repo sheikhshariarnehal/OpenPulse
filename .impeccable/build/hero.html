@@ -1,0 +1,2205 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenPulse — Developer Telemetry & Analytics (shadcn/ui)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --background: #09090b;
+      --foreground: #fafafa;
+      --card: #0c0c0e;
+      --card-border: #27272a;
+      --card-foreground: #fafafa;
+      --popover: #09090b;
+      --popover-border: #27272a;
+      --primary: #fafafa;
+      --primary-foreground: #18181b;
+      --secondary: #27272a;
+      --secondary-foreground: #fafafa;
+      --muted: #18181b;
+      --muted-foreground: #a1a1aa;
+      --accent: #27272a;
+      --accent-foreground: #fafafa;
+      --destructive: #7f1d1d;
+      --destructive-foreground: #fca5a5;
+      --border: #27272a;
+      --border-subtle: #1f1f23;
+      --input: #27272a;
+      --ring: #d4d4d8;
+      --emerald: #10b981;
+      --emerald-subtle: rgba(16, 185, 129, 0.12);
+      --cyan: #06b6d4;
+      --cyan-subtle: rgba(6, 182, 212, 0.12);
+      --amber: #f59e0b;
+      --amber-subtle: rgba(245, 158, 11, 0.12);
+      --rose: #f43f5e;
+      --rose-subtle: rgba(244, 63, 94, 0.12);
+      --sky: #38bdf8;
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 1376px;
+      height: 768px;
+      overflow: hidden;
+      background-color: var(--background);
+      color: var(--foreground);
+      font-family: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .mono {
+      font-family: 'Geist Mono', 'JetBrains Mono', monospace;
+      font-feature-settings: 'tnum' 1, 'zero' 1;
+    }
+
+    /* Layout Shell */
+    .app-shell {
+      display: flex;
+      width: 1376px;
+      height: 768px;
+      position: relative;
+      background: var(--background);
+    }
+
+    /* -------------------------------------------------------------
+       SHADCN SIDEBAR COMPONENT
+    -------------------------------------------------------------- */
+    .sidebar {
+      width: 240px;
+      height: 100%;
+      background: #09090b;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      padding: 12px;
+      z-index: 20;
+    }
+
+    /* Workspace / Team Switcher (Shadcn pattern) */
+    .ws-switcher {
+      position: relative;
+      margin-bottom: 12px;
+    }
+
+    .ws-switcher-trigger {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      background: #121215;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--foreground);
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s ease;
+    }
+
+    .ws-switcher-trigger:hover {
+      background: #18181b;
+      border-color: #3f3f46;
+    }
+
+    .ws-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: #18181b;
+      border: 1px solid #27272a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #38bdf8;
+      flex-shrink: 0;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    }
+
+    .ws-meta {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .ws-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fafafa;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      letter-spacing: -0.01em;
+    }
+
+    .ws-tier {
+      font-size: 11px;
+      color: var(--muted-foreground);
+    }
+
+    .ws-chevrons {
+      color: #71717a;
+      flex-shrink: 0;
+    }
+
+    /* Popover Menu */
+    .ws-popover {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      width: 236px;
+      background: #0c0c0e;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255,255,255,0.05);
+      z-index: 80;
+      padding: 4px;
+      animation: popoverFade 0.12s ease-out;
+    }
+
+    .ws-popover.open {
+      display: block;
+    }
+
+    @keyframes popoverFade {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .ws-section-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: #71717a;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 6px 8px 4px 8px;
+    }
+
+    .ws-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      color: #d4d4d8;
+      font-size: 12.5px;
+      transition: background 0.12s;
+    }
+
+    .ws-item:hover {
+      background: #18181b;
+      color: #fafafa;
+    }
+
+    .ws-item.active {
+      background: #18181b;
+      color: #38bdf8;
+      font-weight: 500;
+    }
+
+    .ws-item-badge {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9.5px;
+      font-weight: 700;
+      background: #27272a;
+      color: #fafafa;
+    }
+
+    .ws-item-check {
+      margin-left: auto;
+      color: #38bdf8;
+      font-size: 13px;
+    }
+
+    .ws-divider {
+      height: 1px;
+      background: #27272a;
+      margin: 4px 0;
+    }
+
+    .ws-create-trigger {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      background: transparent;
+      border: none;
+      color: #a1a1aa;
+      font-size: 12px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.12s;
+    }
+
+    .ws-create-trigger:hover {
+      background: #18181b;
+      color: #fafafa;
+    }
+
+    /* Sidebar Navigation Links */
+    .nav-section {
+      margin-top: 10px;
+    }
+
+    .nav-section-title {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #71717a;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 4px 8px;
+      margin-bottom: 2px;
+    }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      color: #a1a1aa;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.12s ease;
+    }
+
+    .nav-item:hover {
+      background: #18181b;
+      color: #fafafa;
+    }
+
+    .nav-item.active {
+      background: #18181b;
+      color: #fafafa;
+      font-weight: 500;
+    }
+
+    .nav-item svg {
+      width: 15px;
+      height: 15px;
+      color: #71717a;
+      flex-shrink: 0;
+    }
+
+    .nav-item.active svg {
+      color: #fafafa;
+    }
+
+    .nav-badge {
+      margin-left: auto;
+      font-size: 9.5px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: #18181b;
+      border: 1px solid #27272a;
+      color: #a1a1aa;
+      font-family: 'Geist Mono', monospace;
+    }
+
+    .nav-badge.live {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.3);
+      color: #10b981;
+      font-weight: 600;
+    }
+
+    /* Sidebar Footer */
+    .sidebar-footer {
+      margin-top: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+    }
+
+    .cluster-status-pill {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px 8px;
+      background: #121215;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 11px;
+      color: #71717a;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #fafafa;
+      font-weight: 500;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 6px #10b981;
+    }
+
+    .user-profile-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 6px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .user-profile-row:hover {
+      background: #18181b;
+    }
+
+    .user-avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #27272a;
+      border: 1px solid #3f3f46;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #fafafa;
+    }
+
+    .user-details {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .user-name-text {
+      font-size: 12px;
+      font-weight: 500;
+      color: #fafafa;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .user-email-text {
+      font-size: 10px;
+      color: #71717a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* -------------------------------------------------------------
+       MAIN STAGE (Shadcn Modern Analytics Viewport)
+    -------------------------------------------------------------- */
+    .main-viewport {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: var(--background);
+      overflow: hidden;
+    }
+
+    /* Top Navbar */
+    .top-navbar {
+      height: 48px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      flex-shrink: 0;
+      background: #09090b;
+    }
+
+    .breadcrumb-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12.5px;
+    }
+
+    .crumb-dim {
+      color: #71717a;
+    }
+
+    .crumb-sep {
+      color: #3f3f46;
+      font-size: 11px;
+    }
+
+    .crumb-active {
+      color: #fafafa;
+      font-weight: 500;
+    }
+
+    .navbar-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .search-cmd-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #121215;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      color: #71717a;
+      font-size: 12px;
+      cursor: pointer;
+      width: 220px;
+      transition: all 0.15s;
+    }
+
+    .search-cmd-btn:hover {
+      border-color: #3f3f46;
+      color: #a1a1aa;
+      background: #18181b;
+    }
+
+    .kbd-shortcut {
+      margin-left: auto;
+      font-size: 10px;
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 4px;
+      padding: 1px 5px;
+      color: #a1a1aa;
+      font-family: 'Geist Mono', monospace;
+    }
+
+    .date-range-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #121215;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 10px;
+      color: #fafafa;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .date-range-btn:hover {
+      background: #18181b;
+      border-color: #3f3f46;
+    }
+
+    .icon-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: #a1a1aa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.12s;
+    }
+
+    .icon-btn:hover {
+      background: #18181b;
+      border-color: var(--border);
+      color: #fafafa;
+    }
+
+    .btn-notif-dot {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #38bdf8;
+    }
+
+    /* Content Area */
+    .dashboard-container {
+      flex: 1;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow: hidden;
+    }
+
+    /* Page Header with Tabs */
+    .header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .header-titles {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .page-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #fafafa;
+      letter-spacing: -0.02em;
+    }
+
+    .page-subtitle {
+      font-size: 11.5px;
+      color: #71717a;
+    }
+
+    .tabs-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: #121215;
+      padding: 3px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .tab-pill {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #71717a;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      transition: all 0.12s;
+    }
+
+    .tab-pill:hover {
+      color: #d4d4d8;
+    }
+
+    .tab-pill.active {
+      background: #27272a;
+      color: #fafafa;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+
+    .action-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .action-btn-subtle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #121215;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 10px;
+      color: #a1a1aa;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .action-btn-subtle:hover {
+      background: #18181b;
+      color: #fafafa;
+      border-color: #3f3f46;
+    }
+
+    .action-btn-primary {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #fafafa;
+      border: 1px solid #fafafa;
+      border-radius: 6px;
+      padding: 5px 12px;
+      color: #09090b;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .action-btn-primary:hover {
+      background: #e4e4e7;
+    }
+
+    /* -------------------------------------------------------------
+       SHADCN STAT CARDS (4 KPI Grid)
+    -------------------------------------------------------------- */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .kpi-card {
+      background: #09090b;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: border-color 0.15s ease;
+    }
+
+    .kpi-card:hover {
+      border-color: #3f3f46;
+    }
+
+    .kpi-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .kpi-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #a1a1aa;
+    }
+
+    .kpi-icon {
+      color: #71717a;
+      width: 15px;
+      height: 15px;
+    }
+
+    .kpi-metric {
+      font-size: 22px;
+      font-weight: 700;
+      color: #fafafa;
+      letter-spacing: -0.02em;
+    }
+
+    .kpi-footer {
+      font-size: 11px;
+      color: #71717a;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .trend-pos {
+      color: #10b981;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .trend-neutral {
+      color: #38bdf8;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    /* -------------------------------------------------------------
+       MIDDLE SECTION: TELEMETRY CHART + LIVE EVENT STREAM
+    -------------------------------------------------------------- */
+    .telemetry-split {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 12px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* Ingestion Chart Card */
+    .chart-panel {
+      background: #09090b;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .panel-title-block {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #fafafa;
+    }
+
+    .panel-desc {
+      font-size: 11px;
+      color: #71717a;
+    }
+
+    .chart-time-selectors {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      background: #121215;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px;
+    }
+
+    .time-chip {
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 10.5px;
+      font-weight: 500;
+      color: #71717a;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+    }
+
+    .time-chip.active {
+      background: #27272a;
+      color: #fafafa;
+    }
+
+    .chart-viewport {
+      flex: 1;
+      position: relative;
+      width: 100%;
+      min-height: 140px;
+    }
+
+    canvas#telemetryChart {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Live Stream Card */
+    .stream-panel {
+      background: #09090b;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .stream-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .stream-title-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .stream-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fafafa;
+    }
+
+    .stream-pulse-badge {
+      font-size: 9.5px;
+      font-weight: 600;
+      color: #10b981;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+
+    .stream-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .stream-pause-btn {
+      font-size: 10.5px;
+      color: #a1a1aa;
+      background: #121215;
+      border: 1px solid var(--border);
+      padding: 2px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .stream-pause-btn:hover {
+      color: #fafafa;
+      background: #18181b;
+    }
+
+    .stream-list {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      gap: 2px;
+      margin-top: 4px;
+    }
+
+    .stream-list::-webkit-scrollbar {
+      width: 4px;
+    }
+    .stream-list::-webkit-scrollbar-thumb {
+      background: #27272a;
+      border-radius: 2px;
+    }
+
+    .stream-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border-bottom: 1px solid #141417;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+
+    .stream-row:hover {
+      background: #141417;
+    }
+
+    .stream-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .event-type-badge {
+      font-size: 9.5px;
+      font-weight: 600;
+      padding: 1.5px 5px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .badge-status-200 {
+      background: var(--emerald-subtle);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .badge-status-202 {
+      background: var(--cyan-subtle);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+
+    .badge-status-500 {
+      background: var(--rose-subtle);
+      color: #fb7185;
+      border: 1px solid rgba(244, 63, 94, 0.25);
+    }
+
+    .event-info-col {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .event-name-text {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: #fafafa;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .event-source-text {
+      font-size: 10px;
+      color: #71717a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .stream-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      flex-shrink: 0;
+      margin-left: 8px;
+    }
+
+    .event-latency-text {
+      font-size: 10.5px;
+      color: #d4d4d8;
+    }
+
+    .event-time-text {
+      font-size: 9.5px;
+      color: #52525b;
+    }
+
+    /* -------------------------------------------------------------
+       BOTTOM SECTION: SOURCE BREAKDOWN & CLUSTER HEALTH
+    -------------------------------------------------------------- */
+    .bottom-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      height: 110px;
+      flex-shrink: 0;
+    }
+
+    .sub-card {
+      background: #09090b;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sub-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .sub-card-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #fafafa;
+    }
+
+    .sub-card-badge {
+      font-size: 10px;
+      color: #71717a;
+    }
+
+    /* Sources Progress Bars */
+    .sources-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .source-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+    }
+
+    .source-label {
+      width: 140px;
+      color: #a1a1aa;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .progress-track {
+      flex: 1;
+      height: 6px;
+      background: #18181b;
+      border-radius: 9999px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 9999px;
+      background: #38bdf8;
+    }
+
+    .source-val {
+      width: 45px;
+      text-align: right;
+      color: #fafafa;
+      font-weight: 500;
+    }
+
+    /* Cluster Shards Grid */
+    .shards-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .shard-box {
+      background: #121215;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .shard-name-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #71717a;
+    }
+
+    .shard-health-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #10b981;
+    }
+
+    .shard-cpu-val {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fafafa;
+    }
+
+    .shard-meta-desc {
+      font-size: 9.5px;
+      color: #71717a;
+    }
+
+    /* -------------------------------------------------------------
+       SHADCN RADIX DIALOG: CREATE WORKSPACE MODAL
+    -------------------------------------------------------------- */
+    .dialog-overlay {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dialog-overlay.active {
+      display: flex;
+    }
+
+    .dialog-content {
+      width: 440px;
+      background: #09090b;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255,255,255,0.05);
+      padding: 24px;
+      animation: dialogScale 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes dialogScale {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .dialog-header-block {
+      margin-bottom: 18px;
+    }
+
+    .dialog-title-text {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fafafa;
+      letter-spacing: -0.01em;
+    }
+
+    .dialog-desc-text {
+      font-size: 12px;
+      color: #71717a;
+      margin-top: 4px;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-label-text {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: #d4d4d8;
+      margin-bottom: 6px;
+    }
+
+    .form-text-input {
+      width: 100%;
+      background: #121215;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 10px;
+      color: #fafafa;
+      font-size: 13px;
+      outline: none;
+      transition: all 0.15s;
+    }
+
+    .form-text-input:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 1px #38bdf8;
+    }
+
+    .dialog-button-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 22px;
+    }
+
+    .btn-dialog-cancel {
+      background: #18181b;
+      border: 1px solid var(--border);
+      color: #d4d4d8;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 7px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .btn-dialog-cancel:hover {
+      background: #27272a;
+      color: #fafafa;
+    }
+
+    .btn-dialog-submit {
+      background: #fafafa;
+      border: none;
+      color: #09090b;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 7px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: opacity 0.12s;
+    }
+
+    .btn-dialog-submit:hover {
+      opacity: 0.9;
+    }
+
+    /* -------------------------------------------------------------
+       COMMAND PALETTE DIALOG (⌘K)
+    -------------------------------------------------------------- */
+    .cmd-overlay {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      z-index: 120;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 100px;
+    }
+
+    .cmd-overlay.active {
+      display: flex;
+    }
+
+    .cmd-dialog {
+      width: 520px;
+      background: #09090b;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.9);
+      overflow: hidden;
+      animation: dialogScale 0.15s ease-out;
+    }
+
+    .cmd-input-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .cmd-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-size: 14px;
+      color: #fafafa;
+      font-family: inherit;
+    }
+
+    .cmd-results {
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      max-height: 260px;
+      overflow-y: auto;
+    }
+
+    .cmd-group-label {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #71717a;
+      text-transform: uppercase;
+      padding: 6px 8px 4px 8px;
+    }
+
+    .cmd-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      color: #d4d4d8;
+      font-size: 12.5px;
+      cursor: pointer;
+    }
+
+    .cmd-item:hover, .cmd-item.selected {
+      background: #18181b;
+      color: #fafafa;
+    }
+
+    /* -------------------------------------------------------------
+       DRAWER / INSPECTOR SHEET (Event Details)
+    -------------------------------------------------------------- */
+    .sheet-drawer {
+      position: absolute;
+      top: 0;
+      right: -380px;
+      width: 380px;
+      height: 100%;
+      background: #0c0c0e;
+      border-left: 1px solid var(--border);
+      box-shadow: -10px 0 30px rgba(0,0,0,0.7);
+      z-index: 90;
+      transition: right 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      padding: 18px;
+    }
+
+    .sheet-drawer.open {
+      right: 0;
+    }
+
+    .sheet-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .sheet-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fafafa;
+    }
+
+    .sheet-close-btn {
+      background: none;
+      border: none;
+      color: #71717a;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .sheet-close-btn:hover {
+      color: #fafafa;
+    }
+
+    .sheet-json-viewer {
+      background: #09090b;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 11px;
+      color: #38bdf8;
+      overflow-x: auto;
+      flex: 1;
+      font-family: 'Geist Mono', monospace;
+      white-space: pre-wrap;
+    }
+
+    /* Toast Notification (Sonner style) */
+    .toast-container {
+      position: absolute;
+      bottom: 16px;
+      right: 20px;
+      z-index: 150;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      pointer-events: none;
+    }
+
+    .toast-box {
+      background: #09090b;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #fafafa;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      animation: toastIn 0.2s ease-out;
+      pointer-events: auto;
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- SHADCN SIDEBAR -->
+    <aside class="sidebar">
+      <!-- Team / Workspace Switcher (Radix Popover) -->
+      <div class="ws-switcher">
+        <button class="ws-switcher-trigger" id="wsSwitcherTrigger" onclick="toggleWsPopover()">
+          <div class="ws-avatar" id="wsCurrentLogo">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+          </div>
+          <div class="ws-meta">
+            <span class="ws-name" id="wsCurrentName">Acme Corp</span>
+            <span class="ws-tier" id="wsCurrentPlan">Enterprise Dedicated</span>
+          </div>
+          <svg class="ws-chevrons" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5-5"/>
+          </svg>
+        </button>
+
+        <!-- Dropdown Popover List -->
+        <div class="ws-popover" id="wsPopoverMenu">
+          <div class="ws-section-label">Workspaces</div>
+          <div class="ws-item active" onclick="selectWs('Acme Corp', 'Enterprise Dedicated')">
+            <div class="ws-item-badge">AC</div>
+            <span>Acme Corp</span>
+            <span class="ws-item-check">&check;</span>
+          </div>
+          <div class="ws-item" onclick="selectWs('Personal Sandbox', 'Hobby / Free')">
+            <div class="ws-item-badge" style="background:#1e293b; color:#38bdf8;">PS</div>
+            <span>Personal Sandbox</span>
+          </div>
+          <div class="ws-item" onclick="selectWs('Staging Cluster', 'Team Pro')">
+            <div class="ws-item-badge" style="background:#27272a; color:#f59e0b;">SC</div>
+            <span>Staging Cluster</span>
+          </div>
+          <div class="ws-divider"></div>
+          <button class="ws-create-trigger" onclick="openCreateWorkspaceDialog()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            <span>Create Workspace</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Navigation: Analytics Platform -->
+      <div class="nav-section">
+        <div class="nav-section-title">Telemetry</div>
+        <ul class="nav-list">
+          <li>
+            <a class="nav-item active" onclick="setTab('overview')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+              <span>Overview</span>
+            </a>
+          </li>
+          <li>
+            <a class="nav-item" onclick="setTab('stream')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+              <span>Realtime Stream</span>
+              <span class="nav-badge live">LIVE</span>
+            </a>
+          </li>
+          <li>
+            <a class="nav-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <span>Event Explorer</span>
+            </a>
+          </li>
+          <li>
+            <a class="nav-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+              <span>Funnels & Conversions</span>
+            </a>
+          </li>
+          <li>
+            <a class="nav-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <span>Users & Cohorts</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Navigation: Observability -->
+      <div class="nav-section">
+        <div class="nav-section-title">Observability</div>
+        <ul class="nav-list">
+          <li>
+            <a class="nav-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span>Error Tracking</span>
+              <span class="nav-badge" style="color:#f43f5e;">14</span>
+            </a>
+          </li>
+          <li>
+            <a class="nav-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span>Latency & Web Vitals</span>
+            </a>
+          </li>
+          <li>
+            <a class="nav-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>
+              <span>ClickHouse Nodes</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Sidebar Footer -->
+      <div class="sidebar-footer">
+        <div class="cluster-status-pill">
+          <div class="status-indicator">
+            <span class="status-dot"></span>
+            <span>ClickHouse Cluster</span>
+          </div>
+          <span class="mono" style="font-size:10px; color:#10b981;">8/8 UP</span>
+        </div>
+
+        <div class="user-profile-row" onclick="showToast('Logged in as Sheikh Nehal (nehal@openpulse.io)')">
+          <div class="user-avatar">SN</div>
+          <div class="user-details">
+            <span class="user-name-text">Sheikh Nehal</span>
+            <span class="user-email-text">nehal@openpulse.io</span>
+          </div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:#71717a;">
+            <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+          </svg>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN VIEWPORT -->
+    <main class="main-viewport">
+      <!-- Top Navbar (Breadcrumb & Global Actions) -->
+      <header class="top-navbar">
+        <div class="breadcrumb-row">
+          <span class="crumb-dim">Workspaces</span>
+          <span class="crumb-sep">/</span>
+          <span class="crumb-dim" id="topCrumbWs">Acme Corp</span>
+          <span class="crumb-sep">/</span>
+          <span class="crumb-active">Telemetry Analytics</span>
+        </div>
+
+        <div class="navbar-controls">
+          <button class="search-cmd-btn" onclick="openCmdPalette()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span>Search telemetry...</span>
+            <span class="kbd-shortcut">⌘K</span>
+          </button>
+
+          <button class="date-range-btn" onclick="showToast('Date range: Last 24 Hours')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+            <span>Last 24 Hours</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:#71717a;"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+
+          <button class="icon-btn" onclick="showToast('14 uncaught exceptions detected in production.')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+            <span class="btn-notif-dot"></span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Dashboard Body Area -->
+      <section class="dashboard-container">
+        <!-- Page Header Bar -->
+        <div class="header-bar">
+          <div class="header-titles">
+            <h1 class="page-title">Telemetry & Ingestion Analytics</h1>
+            <p class="page-subtitle">Real-time sub-millisecond event streaming, vectorized ClickHouse ingestion, and latency distributions.</p>
+          </div>
+
+          <div class="action-group">
+            <div class="tabs-wrapper">
+              <button class="tab-pill active" onclick="switchTab(this, 'overview')">Overview</button>
+              <button class="tab-pill" onclick="switchTab(this, 'stream')">Live Stream</button>
+              <button class="tab-pill" onclick="switchTab(this, 'latency')">Latency</button>
+              <button class="tab-pill" onclick="switchTab(this, 'shards')">Shards</button>
+            </div>
+
+            <button class="action-btn-subtle" onclick="showToast('Exporting event dataset as Parquet / CSV...')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+              <span>Export</span>
+            </button>
+            <button class="action-btn-primary" onclick="openCmdPalette()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>Add Query</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 KPI Stat Cards (Shadcn Metric System) -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">Total Ingested Events</span>
+              <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            </div>
+            <div class="kpi-metric mono" id="kpiEventCount">48,291,040</div>
+            <div class="kpi-footer">
+              <span class="trend-pos">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+                +14.2%
+              </span>
+              <span>from previous 24h window</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">p95 Ingestion Latency</span>
+              <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div class="kpi-metric mono" style="color:#38bdf8;">0.42 ms</div>
+            <div class="kpi-footer">
+              <span class="trend-pos">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                -0.08 ms
+              </span>
+              <span>beating 1.0ms SLA target</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">Active ClickHouse Shards</span>
+              <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>
+            </div>
+            <div class="kpi-metric mono">8 Nodes</div>
+            <div class="kpi-footer">
+              <span class="trend-neutral">Replicated</span>
+              <span>100% healthy · 0 replication lag</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">Uncaught Error Rate</span>
+              <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/></svg>
+            </div>
+            <div class="kpi-metric mono" style="color:#10b981;">0.02%</div>
+            <div class="kpi-footer">
+              <span class="trend-pos">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                -0.01%
+              </span>
+              <span>vs deployment v1.4.2</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Middle Telemetry Section: Chart + Live Event Stream -->
+        <div class="telemetry-split">
+          <!-- Chart Panel -->
+          <div class="chart-panel">
+            <div class="panel-header">
+              <div class="panel-title-block">
+                <span class="panel-title">Ingestion Velocity & Throughput</span>
+                <span class="panel-desc">Real-time vectorized telemetry batches per second into ClickHouse buffer</span>
+              </div>
+
+              <div class="chart-time-selectors">
+                <button class="time-chip" onclick="setTimeRange(this, '1h')">1h</button>
+                <button class="time-chip active" onclick="setTimeRange(this, '24h')">24h</button>
+                <button class="time-chip" onclick="setTimeRange(this, '7d')">7d</button>
+                <button class="time-chip" onclick="setTimeRange(this, '30d')">30d</button>
+              </div>
+            </div>
+
+            <div class="chart-viewport">
+              <canvas id="telemetryChart" width="670" height="165"></canvas>
+            </div>
+          </div>
+
+          <!-- Live Event Stream Feed -->
+          <div class="stream-panel">
+            <div class="stream-header">
+              <div class="stream-title-row">
+                <span class="stream-title">Live Ingestion Stream</span>
+                <span class="stream-pulse-badge mono">1,420 evt/s</span>
+              </div>
+              <div class="stream-controls">
+                <button class="stream-pause-btn mono" id="pauseBtn" onclick="toggleStreamPause()">PAUSE</button>
+              </div>
+            </div>
+
+            <div class="stream-list mono" id="streamList">
+              <!-- Live stream items inserted here -->
+              <div class="stream-row" onclick="inspectEvent('$pageview', '/dashboard/analytics', '200 OK', '0.3ms')">
+                <div class="stream-left">
+                  <span class="event-type-badge badge-status-200">200 OK</span>
+                  <div class="event-info-col">
+                    <span class="event-name-text">$pageview</span>
+                    <span class="event-source-text">usr_9821 · /analytics</span>
+                  </div>
+                </div>
+                <div class="stream-right">
+                  <span class="event-latency-text">0.3 ms</span>
+                  <span class="event-time-text">just now</span>
+                </div>
+              </div>
+
+              <div class="stream-row" onclick="inspectEvent('checkout.started', 'cart_total: $149.00', '200 OK', '0.4ms')">
+                <div class="stream-left">
+                  <span class="event-type-badge badge-status-200">200 OK</span>
+                  <div class="event-info-col">
+                    <span class="event-name-text">checkout.started</span>
+                    <span class="event-source-text">usr_1104 · web-checkout</span>
+                  </div>
+                </div>
+                <div class="stream-right">
+                  <span class="event-latency-text">0.4 ms</span>
+                  <span class="event-time-text">1s ago</span>
+                </div>
+              </div>
+
+              <div class="stream-row" onclick="inspectEvent('api.telemetry_batch', 'FastAPI Ingestion Node 02', '202 ACCEPT', '0.2ms')">
+                <div class="stream-left">
+                  <span class="event-type-badge badge-status-202">202 ACCEPT</span>
+                  <div class="event-info-col">
+                    <span class="event-name-text">api.telemetry_batch</span>
+                    <span class="event-source-text">cluster-ingest-eu-01</span>
+                  </div>
+                </div>
+                <div class="stream-right">
+                  <span class="event-latency-text">0.2 ms</span>
+                  <span class="event-time-text">2s ago</span>
+                </div>
+              </div>
+
+              <div class="stream-row" onclick="inspectEvent('web_vital_lcp', 'LCP: 1.12s (good)', '200 OK', '0.5ms')">
+                <div class="stream-left">
+                  <span class="event-type-badge badge-status-200">200 OK</span>
+                  <div class="event-info-col">
+                    <span class="event-name-text">web_vital_lcp</span>
+                    <span class="event-source-text">client-safari-mac</span>
+                  </div>
+                </div>
+                <div class="stream-right">
+                  <span class="event-latency-text">0.5 ms</span>
+                  <span class="event-time-text">3s ago</span>
+                </div>
+              </div>
+
+              <div class="stream-row" onclick="inspectEvent('auth.login_failed', 'invalid_credentials', '500 ERR', '0.6ms')">
+                <div class="stream-left">
+                  <span class="event-type-badge badge-status-500">500 ERR</span>
+                  <div class="event-info-col">
+                    <span class="event-name-text">auth.login_failed</span>
+                    <span class="event-source-text">ip: 198.51.100.22</span>
+                  </div>
+                </div>
+                <div class="stream-right">
+                  <span class="event-latency-text">0.6 ms</span>
+                  <span class="event-time-text">4s ago</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Section: SDK Distribution & Cluster Shard Health -->
+        <div class="bottom-split">
+          <!-- SDK Sources Progress -->
+          <div class="sub-card">
+            <div class="sub-card-header">
+              <span class="sub-card-title">Ingestion Volume by SDK</span>
+              <span class="sub-card-badge mono">48.2M Total</span>
+            </div>
+            <div class="sources-list mono">
+              <div class="source-item">
+                <span class="source-label">@openpulse/web</span>
+                <div class="progress-track"><div class="progress-fill" style="width: 54%;"></div></div>
+                <span class="source-val">54%</span>
+              </div>
+              <div class="source-item">
+                <span class="source-label">@openpulse/node</span>
+                <div class="progress-track"><div class="progress-fill" style="width: 28%; background:#34d399;"></div></div>
+                <span class="source-val">28%</span>
+              </div>
+              <div class="source-item">
+                <span class="source-label">@openpulse/python</span>
+                <div class="progress-track"><div class="progress-fill" style="width: 18%; background:#f59e0b;"></div></div>
+                <span class="source-val">18%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ClickHouse Shards -->
+          <div class="sub-card">
+            <div class="sub-card-header">
+              <span class="sub-card-title">ClickHouse Node Health</span>
+              <span class="sub-card-badge mono">All Shards Healthy</span>
+            </div>
+            <div class="shards-grid mono">
+              <div class="shard-box">
+                <div class="shard-name-row">
+                  <span>ch-01</span>
+                  <span class="shard-health-dot"></span>
+                </div>
+                <div class="shard-cpu-val">24%</div>
+                <div class="shard-meta-desc">CPU · 4.2 GB</div>
+              </div>
+              <div class="shard-box">
+                <div class="shard-name-row">
+                  <span>ch-02</span>
+                  <span class="shard-health-dot"></span>
+                </div>
+                <div class="shard-cpu-val">29%</div>
+                <div class="shard-meta-desc">CPU · 4.8 GB</div>
+              </div>
+              <div class="shard-box">
+                <div class="shard-name-row">
+                  <span>ch-03</span>
+                  <span class="shard-health-dot"></span>
+                </div>
+                <div class="shard-cpu-val">21%</div>
+                <div class="shard-meta-desc">CPU · 3.9 GB</div>
+              </div>
+              <div class="shard-box">
+                <div class="shard-name-row">
+                  <span>ch-04</span>
+                  <span class="shard-health-dot"></span>
+                </div>
+                <div class="shard-cpu-val">32%</div>
+                <div class="shard-meta-desc">CPU · 5.1 GB</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- SHADCN RADIX CREATE WORKSPACE DIALOG -->
+    <div class="dialog-overlay" id="wsCreateModal" onclick="handleModalOverlayClick(event)">
+      <div class="dialog-content">
+        <div class="dialog-header-block">
+          <h2 class="dialog-title-text">Create Workspace</h2>
+          <p class="dialog-desc-text">Workspaces isolate telemetry data, projects, API keys, and dedicated ClickHouse storage partitions.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label-text">Workspace Name</label>
+          <input type="text" class="form-text-input" id="newWsName" placeholder="e.g. Acme Production" value="Telemetry Analytics Dev">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label-text">Slug Identifier</label>
+          <input type="text" class="form-text-input mono" id="newWsSlug" placeholder="e.g. acme-production" value="telemetry-analytics-dev">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label-text">Storage & Shard Allocation</label>
+          <select class="form-text-input" style="background:#121215; color:#fafafa;">
+            <option>Dedicated ClickHouse Shard (Recommended)</option>
+            <option>Shared Multi-Tenant Partition</option>
+            <option>Self-Hosted On-Premise Gateway</option>
+          </select>
+        </div>
+
+        <div class="dialog-button-row">
+          <button class="btn-dialog-cancel" onclick="closeCreateWorkspaceDialog()">Cancel</button>
+          <button class="btn-dialog-submit" onclick="submitCreateWorkspace()">Create Workspace</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMMAND PALETTE MODAL (⌘K) -->
+    <div class="cmd-overlay" id="cmdPaletteModal" onclick="handleCmdOverlayClick(event)">
+      <div class="cmd-dialog">
+        <div class="cmd-input-row">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:#71717a;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" class="cmd-input" id="cmdQueryInput" placeholder="Type a command or search telemetry..." oninput="filterCmdList()">
+          <span class="kbd-shortcut">ESC</span>
+        </div>
+        <div class="cmd-results" id="cmdResultsList">
+          <div class="cmd-group-label">Quick Actions</div>
+          <div class="cmd-item" onclick="openCreateWorkspaceDialog(); closeCmdPalette();">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>Create New Workspace</span>
+          </div>
+          <div class="cmd-item" onclick="showToast('Navigating to Live Event Stream'); closeCmdPalette();">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            <span>Jump to Realtime Stream</span>
+          </div>
+          <div class="cmd-item" onclick="showToast('Opening API Keys & SDK Docs'); closeCmdPalette();">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 7h10"/></svg>
+            <span>View SDK Integration Snippets</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE-OVER EVENT INSPECTOR SHEET -->
+    <div class="sheet-drawer" id="eventSheet">
+      <div class="sheet-top">
+        <span class="sheet-title">Event Payload Inspector</span>
+        <button class="sheet-close-btn" onclick="closeEventSheet()">&times;</button>
+      </div>
+      <div class="sheet-json-viewer" id="sheetJsonBody">{
+  "event": "$pageview",
+  "timestamp": "2026-09-17T14:15:30.412Z",
+  "distinct_id": "usr_9821a8f0",
+  "properties": {
+    "$current_url": "/dashboard/analytics",
+    "$browser": "Chrome 128.0",
+    "$os": "Windows 11",
+    "p95_latency_ms": 0.38,
+    "shard_id": "ch-ingest-02"
+  }
+}</div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div class="toast-container" id="toastContainer"></div>
+  </div>
+
+  <script>
+    // Workspace Management
+    function toggleWsPopover() {
+      const pop = document.getElementById('wsPopoverMenu');
+      pop.classList.toggle('open');
+    }
+
+    function selectWs(name, tier) {
+      document.getElementById('wsCurrentName').innerText = name;
+      document.getElementById('wsCurrentPlan').innerText = tier;
+      document.getElementById('topCrumbWs').innerText = name;
+      document.getElementById('wsPopoverMenu').classList.remove('open');
+      showToast('Switched to workspace: ' + name);
+    }
+
+    function openCreateWorkspaceDialog() {
+      document.getElementById('wsPopoverMenu').classList.remove('open');
+      document.getElementById('wsCreateModal').classList.add('active');
+    }
+
+    function closeCreateWorkspaceDialog() {
+      document.getElementById('wsCreateModal').classList.remove('open');
+      document.getElementById('wsCreateModal').classList.remove('active');
+    }
+
+    function handleModalOverlayClick(e) {
+      if (e.target.id === 'wsCreateModal') {
+        closeCreateWorkspaceDialog();
+      }
+    }
+
+    function submitCreateWorkspace() {
+      const name = document.getElementById('newWsName').value || 'New Workspace';
+      selectWs(name, 'Dedicated ClickHouse');
+      closeCreateWorkspaceDialog();
+      showToast('Workspace "' + name + '" created successfully!');
+    }
+
+    document.addEventListener('click', function(e) {
+      const trigger = document.getElementById('wsSwitcherTrigger');
+      const popover = document.getElementById('wsPopoverMenu');
+      if (trigger && popover && !trigger.contains(e.target) && !popover.contains(e.target)) {
+        popover.classList.remove('open');
+      }
+    });
+
+    // Command Palette
+    function openCmdPalette() {
+      document.getElementById('cmdPaletteModal').classList.add('active');
+      setTimeout(() => document.getElementById('cmdQueryInput').focus(), 50);
+    }
+
+    function closeCmdPalette() {
+      document.getElementById('cmdPaletteModal').classList.remove('active');
+    }
+
+    function handleCmdOverlayClick(e) {
+      if (e.target.id === 'cmdPaletteModal') {
+        closeCmdPalette();
+      }
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        openCmdPalette();
+      }
+      if (e.key === 'Escape') {
+        closeCmdPalette();
+        closeEventSheet();
+        closeCreateWorkspaceDialog();
+      }
+    });
+
+    // Event Sheet Inspector
+    function inspectEvent(name, path, status, lat) {
+      const sheet = document.getElementById('eventSheet');
+      const jsonViewer = document.getElementById('sheetJsonBody');
+      const sample = {
+        event: name,
+        timestamp: new Date().toISOString(),
+        distinct_id: "usr_" + Math.random().toString(36).substring(2, 9),
+        status: status,
+        latency: lat,
+        properties: {
+          path: path,
+          shard: "ch-ingest-0" + Math.floor(1 + Math.random() * 4),
+          user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          sdk_version: "@openpulse/web@1.4.2"
+        }
+      };
+      jsonViewer.innerText = JSON.stringify(sample, null, 2);
+      sheet.classList.add('open');
+    }
+
+    function closeEventSheet() {
+      document.getElementById('eventSheet').classList.remove('open');
+    }
+
+    // Toast Notifications
+    function showToast(msg) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'toast-box';
+      toast.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>${msg}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(() => toast.remove(), 300);
+      }, 2500);
+    }
+
+    // Live Stream Pause / Resume
+    let streamActive = true;
+    function toggleStreamPause() {
+      streamActive = !streamActive;
+      const btn = document.getElementById('pauseBtn');
+      if (streamActive) {
+        btn.innerText = 'PAUSE';
+        btn.style.color = '#a1a1aa';
+        showToast('Live event stream resumed');
+      } else {
+        btn.innerText = 'RESUME';
+        btn.style.color = '#38bdf8';
+        showToast('Live event stream paused');
+      }
+    }
+
+    // Tabs
+    function switchTab(el, tabName) {
+      document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      showToast('Switched to ' + tabName + ' tab view');
+    }
+
+    function setTimeRange(el, range) {
+      document.querySelectorAll('.time-chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      showToast('Chart resolution set to ' + range);
+      drawChart();
+    }
+
+    // Canvas Chart Rendering (Shadcn style with glowing gradient)
+    const canvas = document.getElementById('telemetryChart');
+    const ctx = canvas.getContext('2d');
+
+    function drawChart() {
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      // Grid lines
+      ctx.strokeStyle = '#27272a';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+
+      [0.2, 0.5, 0.8].forEach(pct => {
+        ctx.beginPath();
+        ctx.moveTo(35, h * pct);
+        ctx.lineTo(w, h * pct);
+        ctx.stroke();
+      });
+
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#71717a';
+      ctx.font = '10px Geist Mono, monospace';
+      ctx.fillText('45k', 6, h * 0.2 + 3);
+      ctx.fillText('25k', 6, h * 0.5 + 3);
+      ctx.fillText('0k', 12, h * 0.8 + 3);
+
+      // Bottom time labels
+      ctx.fillText('00:00', 40, h - 4);
+      ctx.fillText('06:00', w * 0.28, h - 4);
+      ctx.fillText('12:00', w * 0.52, h - 4);
+      ctx.fillText('18:00', w * 0.76, h - 4);
+      ctx.fillText('24:00', w - 35, h - 4);
+
+      // Generate smooth cubic bezier curve
+      const pts = [];
+      const count = 48;
+      const startX = 35;
+      const stepX = (w - startX - 10) / (count - 1);
+
+      for (let i = 0; i < count; i++) {
+        const x = startX + i * stepX;
+        let base = 0.55 + Math.sin(i * 0.28) * 0.18 + (Math.random() - 0.5) * 0.08;
+        if (i > 18 && i < 30) base = 0.28 + Math.random() * 0.12; // peak spike
+        pts.push({ x, y: h * base });
+      }
+
+      // Area gradient
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, 'rgba(56, 189, 248, 0.28)');
+      grad.addColorStop(0.8, 'rgba(56, 189, 248, 0.01)');
+      grad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, h * 0.85);
+      ctx.lineTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) {
+        const prev = pts[i - 1];
+        const curr = pts[i];
+        const midX = (prev.x + curr.x) / 2;
+        ctx.quadraticCurveTo(prev.x, prev.y, midX, (prev.y + curr.y) / 2);
+      }
+      ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+      ctx.lineTo(pts[pts.length - 1].x, h * 0.85);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Stroke Line
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) {
+        const prev = pts[i - 1];
+        const curr = pts[i];
+        const midX = (prev.x + curr.x) / 2;
+        ctx.quadraticCurveTo(prev.x, prev.y, midX, (prev.y + curr.y) / 2);
+      }
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    drawChart();
+
+    // Auto-stream incoming event simulation
+    setInterval(() => {
+      if (!streamActive) return;
+      const list = document.getElementById('streamList');
+      const events = [
+        { name: '$pageview', path: '/pricing', status: '200 OK', cls: 'badge-status-200', lat: '0.3 ms' },
+        { name: 'sdk_flush', path: 'batch_size: 250', status: '202 ACCEPT', cls: 'badge-status-202', lat: '0.2 ms' },
+        { name: 'checkout_step', path: 'step: shipping', status: '200 OK', cls: 'badge-status-200', lat: '0.4 ms' },
+        { name: 'query_timeout', path: 'db_replica_failover', status: '500 ERR', cls: 'badge-status-500', lat: '0.9 ms' }
+      ];
+      const ev = events[Math.floor(Math.random() * events.length)];
+      const row = document.createElement('div');
+      row.className = 'stream-row';
+      row.onclick = () => inspectEvent(ev.name, ev.path, ev.status, ev.lat);
+      row.innerHTML = `
+        <div class="stream-left">
+          <span class="event-type-badge ${ev.cls}">${ev.status}</span>
+          <div class="event-info-col">
+            <span class="event-name-text">${ev.name}</span>
+            <span class="event-source-text">${ev.path}</span>
+          </div>
+        </div>
+        <div class="stream-right">
+          <span class="event-latency-text">${ev.lat}</span>
+          <span class="event-time-text">just now</span>
+        </div>
+      `;
+      list.prepend(row);
+      if (list.children.length > 8) {
+        list.removeChild(list.lastChild);
+      }
+    }, 2800);
+  </script>
+</body>
+</html>

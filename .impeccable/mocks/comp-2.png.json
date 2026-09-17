@@ -1,0 +1,5 @@
+{
+  "title": "Option 2: Split-Pane Telemetry & Live Event Inspector",
+  "prompt": "OpenPulse developer analytics dashboard, Precision Instrument Bench style, dark theme. Split-pane layout for deep telemetry inspection: the main central area displays high-density multi-channel telemetry streams and query filters (Filter by: $browser, release, event_name). On the right is a persistent, slide-out live event inspector panel displaying a selected event's raw JSON payload, formatted with syntax highlighting, latency breakdown (ingest: 0.3ms, redis: 0.1ms, clickhouse: 0.8ms), and client headers. Top header features an active pulse beacon and environment switcher. Crisp JetBrains Mono code, hairline zinc borders, obsidian black background with sharp cyan and amber accents. Utilitarian, highly technical developer workstation UI.",
+  "approved": false
+}

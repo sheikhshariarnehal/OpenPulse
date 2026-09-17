@@ -1,0 +1,5 @@
+{
+  "title": "Option 3: Conversion Funnels & Cohort Retention Heatmap",
+  "prompt": "OpenPulse developer analytics dashboard, Precision Instrument Bench style, dark theme. Focus on Conversion Funnels and Cohort Retention analytics: top section shows a multi-step conversion funnel (Step 1: Pageview, Step 2: Signup Started, Step 3: Org Created, Step 4: First Event Ingested) with high-contrast horizontal step drop-off bars, conversion percentage badges, and timing duration between steps. The middle section shows a weekly cohort retention heatmap matrix with color-intensity cells from cyan to dark navy. Bottom section shows error rate correlation with the latest release version (v1.4.2). Compact left navigation, crisp JetBrains Mono numeric tables, hairline dark zinc borders, obsidian black background. Technical, clean, highly informative developer UI.",
+  "approved": false
+}

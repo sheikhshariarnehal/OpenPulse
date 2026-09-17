@@ -1,0 +1,94 @@
+{
+  "regions": [
+    {
+      "id": "nav-logo",
+      "kind": "text",
+      "grid": "A0:A0",
+      "note": "OpenPulse brand logo and title"
+    },
+    {
+      "id": "nav-links",
+      "kind": "control",
+      "grid": "A1:A4",
+      "note": "primary navigation icon buttons for Events, Statistics, Users, Errors"
+    },
+    {
+      "id": "nav-shortcuts",
+      "kind": "control",
+      "grid": "A5:A8",
+      "note": "shortcuts menu list for Events, Dashboard, and Department"
+    },
+    {
+      "id": "top-title",
+      "kind": "text",
+      "grid": "B0:C0",
+      "note": "Events Dashboard page title"
+    },
+    {
+      "id": "top-controls",
+      "kind": "control",
+      "grid": "H0:J0",
+      "note": "dropdown selectors for Event Shortcut and All Events filter"
+    },
+    {
+      "id": "throughput-title",
+      "kind": "text",
+      "grid": "B1:D1",
+      "note": "Event Throughput headline and sub-millisecond sparkline subtitle"
+    },
+    {
+      "id": "throughput-chart",
+      "kind": "control",
+      "grid": "B2:J4",
+      "note": "interactive runtime telemetry sparkline chart with graticule grid and cyan-emerald pulse trace"
+    },
+    {
+      "id": "kpi-latency",
+      "kind": "control",
+      "grid": "B5:C6",
+      "note": "Ingestion Latency KPI metric card displaying 0.42ms"
+    },
+    {
+      "id": "kpi-events",
+      "kind": "control",
+      "grid": "D5:E6",
+      "note": "Events per sec KPI metric card displaying 32,480/s"
+    },
+    {
+      "id": "kpi-clusters",
+      "kind": "control",
+      "grid": "F5:G6",
+      "note": "Active Clusters KPI metric card displaying 8"
+    },
+    {
+      "id": "kpi-error-rate",
+      "kind": "control",
+      "grid": "H5:J6",
+      "note": "Error Rate KPI metric card displaying 0.02%"
+    },
+    {
+      "id": "table-title",
+      "kind": "text",
+      "grid": "B7:C7",
+      "note": "Live event stream section title"
+    },
+    {
+      "id": "table-filter",
+      "kind": "control",
+      "grid": "H7:J7",
+      "note": "live event stream search and filter input"
+    },
+    {
+      "id": "table-header",
+      "kind": "chrome",
+      "grid": "B8:J8",
+      "note": "table column headers for Timestamp, Status, and Event name"
+    },
+    {
+      "id": "table-rows",
+      "kind": "control",
+      "grid": "B9:J9",
+      "note": "dense live event rows with millisecond timestamps, status pills (200 OK, 202 ACCEPTED), and event names"
+    }
+  ]
+}

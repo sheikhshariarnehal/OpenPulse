@@ -1,0 +1,245 @@
+{
+  "tool": "build-phase",
+  "version": 2,
+  "startedAt": "2026-09-17T13:54:11.149Z",
+  "comp": ".impeccable/mocks/comp-1.png",
+  "direction": "6653f2bf",
+  "breakpoint": "1376x768",
+  "artifact": null,
+  "phase": "hero",
+  "phases": {
+    "comps": {
+      "status": "closed",
+      "openedAt": "2026-09-17T13:54:11.149Z",
+      "closedAt": "2026-09-17T13:57:35.391Z",
+      "attempts": 2,
+      "notes": [],
+      "gate": {
+        "ok": true,
+        "reasons": [],
+        "summary": "3 comps, 1 approved",
+        "approved": ".impeccable/mocks/comp-1.png",
+        "at": "2026-09-17T13:57:35.391Z"
+      },
+      "forced": null
+    },
+    "spec": {
+      "status": "closed",
+      "openedAt": "2026-09-17T13:57:35.492Z",
+      "closedAt": "2026-09-17T13:58:22.933Z",
+      "attempts": 1,
+      "notes": [],
+      "gate": {
+        "ok": true,
+        "reasons": [],
+        "summary": "15 regions, 0 plates, 4 text regions measured",
+        "at": "2026-09-17T13:58:22.933Z"
+      },
+      "forced": null
+    },
+    "plates": {
+      "status": "closed",
+      "openedAt": "2026-09-17T13:58:22.933Z",
+      "closedAt": "2026-09-17T13:58:26.851Z",
+      "attempts": 1,
+      "notes": [],
+      "gate": {
+        "ok": true,
+        "reasons": [],
+        "summary": "no plates owed",
+        "at": "2026-09-17T13:58:26.850Z"
+      },
+      "forced": null
+    },
+    "hero": {
+      "status": "open",
+      "openedAt": "2026-09-17T13:58:26.851Z",
+      "closedAt": null,
+      "attempts": 2,
+      "notes": [],
+      "gate": {
+        "ok": false,
+        "reasons": [
+          "hero overall 37.8% < 72% (structure 41%, color 51%, detail 28%)",
+          "the palette is not the comp's (color intersection 12%): comp #191a1d #2a3a3a #828286 vs build #0a0b0b #162b30 #f8f8f8. Use the spec's sampled palette values, not a rendition of them.",
+          "region nav-logo is missing (detail 0%, structure 46%): the comp shows material the build does not",
+          "region nav-shortcuts is missing (detail 0%, structure 56%): the comp shows material the build does not",
+          "region kpi-latency is missing (detail 1%, structure 36%): the comp shows material the build does not",
+          "region kpi-clusters is missing (detail 2%, structure 48%): the comp shows material the build does not",
+          "region kpi-error-rate is missing (detail 4%, structure 33%): the comp shows material the build does not",
+          "region table-title is missing (detail 3%, structure 47%): the comp shows material the build does not",
+          "region table-header is missing (detail 4%, structure 58%): the comp shows material the build does not",
+          "region table-rows is missing (detail 4%, structure 34%): the comp shows material the build does not",
+          "region nav-links (control) is contradicted (structure 42%, detail added 18%): this control does not read as the comp's: rebuild its chrome from the crop (border, fill, radius, chevron or arrow, label size) rather than from a component default",
+          "region top-title (text) is contradicted (structure 47%, detail added 1%): the composition of this text region differs from the comp; re-derive it from the spec box",
+          "region top-controls (control) is contradicted (structure 48%, detail added 16%): this control does not read as the comp's: rebuild its chrome from the crop (border, fill, radius, chevron or arrow, label size) rather than from a component default",
+          "region throughput-title (text) is contradicted (structure 47%, detail added 39%): the composition of this text region differs from the comp; re-derive it from the spec box",
+          "region throughput-chart (control) is contradicted (structure 47%, detail added 24%): this control does not read as the comp's: rebuild its chrome from the crop (border, fill, radius, chevron or arrow, label size) rather than from a component default",
+          "region kpi-events (control) is contradicted (structure 33%, detail added 8%): this control does not read as the comp's: rebuild its chrome from the crop (border, fill, radius, chevron or arrow, label size) rather than from a component default",
+          "region table-filter (control) is contradicted (structure 57%, detail added 42%): this control does not read as the comp's: rebuild its chrome from the crop (border, fill, radius, chevron or arrow, label size) rather than from a component default",
+          "READINGS, each one CSS edit (2):",
+          "text throughput-title: cap height 7px in the build, 10.4px in the comp (-33%); set font-size so the cap height renders at 10.4px",
+          "control throughput-chart: its rule sits 13px into the box in the comp and 68px in the build (+55px), so the strip is taller than the comp's; match the height, not only the position",
+          "the build carries ink in 15 grid cells where the comp is calm (D0, G1, J1, C2, A4, H4, H5, J5, H6, J6, H7, A9, ...); nothing exists on the page that the comp does not show (a kicker, an extra nav item, a divider, a second row of controls); remove it or name it in a stated decision after the hero passes"
+        ],
+        "summary": "hero 38% (contradicted)",
+        "score": 0.3781,
+        "verdict": "contradicted",
+        "report": ".impeccable/review/diff/hero/report.json",
+        "sideBySide": "D:/Poject/OpenPulse Poject/.impeccable/review/diff/hero/side-by-side.png",
+        "worst": [
+          "table-rows missing 28%",
+          "kpi-error-rate missing 30%",
+          "kpi-latency missing 31%"
+        ],
+        "worstIds": [
+          "table-rows",
+          "kpi-error-rate",
+          "kpi-latency"
+        ],
+        "worstCrops": [
+          {
+            "id": "table-rows",
+            "verdict": "missing",
+            "score": {
+              "overall": 0.2809,
+              "structure": 0.3432,
+              "color": 0.3379,
+              "colorIntersection": 0.1355,
+              "paletteMatch": 0.4469,
+              "detail": 0.0411,
+              "detailRaw": 0.1192,
+              "detailAdded": 0.1563,
+              "bands": 0.2691
+            },
+            "file": ".impeccable/review/diff/hero/regions/table-rows.png"
+          },
+          {
+            "id": "kpi-error-rate",
+            "verdict": "missing",
+            "score": {
+              "overall": 0.3046,
+              "structure": 0.3309,
+              "color": 0.4198,
+              "colorIntersection": 0.0775,
+              "paletteMatch": 0.6041,
+              "detail": 0.0439,
+              "detailRaw": 0.0908,
+              "detailAdded": 0.0938,
+              "bands": 0.3733
+            },
+            "file": ".impeccable/review/diff/hero/regions/kpi-error-rate.png"
+          },
+          {
+            "id": "kpi-latency",
+            "verdict": "missing",
+            "score": {
+              "overall": 0.3089,
+              "structure": 0.3642,
+              "color": 0.4099,
+              "colorIntersection": 0.061,
+              "paletteMatch": 0.5977,
+              "detail": 0.0076,
+              "detailRaw": 0.0076,
+              "detailAdded": 0,
+              "bands": 0.4
+            },
+            "file": ".impeccable/review/diff/hero/regions/kpi-latency.png"
+          }
+        ],
+        "regionVerdicts": {
+          "nav-logo": "missing",
+          "nav-links": "contradicted",
+          "nav-shortcuts": "missing",
+          "top-title": "contradicted",
+          "top-controls": "contradicted",
+          "throughput-title": "contradicted",
+          "throughput-chart": "contradicted",
+          "kpi-latency": "missing",
+          "kpi-events": "contradicted",
+          "kpi-clusters": "missing",
+          "kpi-error-rate": "missing",
+          "table-title": "missing",
+          "table-filter": "contradicted",
+          "table-header": "missing",
+          "table-rows": "missing"
+        },
+        "at": "2026-09-17T14:20:15.251Z"
+      },
+      "forced": null,
+      "records": 3,
+      "readingsSeen": {
+        "text throughput-title: cap height 6px in the build, 10.4px in the comp (-42%); set font-size so the cap height renders at 10.4px": 2,
+        "text throughput-title: cap height 7px in the build, 10.4px in the comp (-33%); set font-size so the cap height renders at 10.4px": 2,
+        "control throughput-chart: its rule sits 13px into the box in the comp and 68px in the build (+55px), so the strip is taller than the comp's; match the height, not only the position": 2
+      },
+      "history": [
+        {
+          "at": "2026-09-17T14:15:37.664Z",
+          "score": 0.3896,
+          "worstIds": [
+            "nav-logo",
+            "kpi-events",
+            "kpi-error-rate"
+          ],
+          "regionVerdicts": {
+            "nav-logo": "missing",
+            "nav-links": "missing",
+            "nav-shortcuts": "missing",
+            "top-title": "contradicted",
+            "top-controls": "contradicted",
+            "throughput-title": "contradicted",
+            "throughput-chart": "missing",
+            "kpi-latency": "missing",
+            "kpi-events": "missing",
+            "kpi-clusters": "missing",
+            "kpi-error-rate": "missing",
+            "table-title": "missing",
+            "table-filter": "missing",
+            "table-header": "missing",
+            "table-rows": "missing"
+          },
+          "artifactHash": null
+        }
+      ]
+    },
+    "sections": {
+      "status": "pending",
+      "openedAt": null,
+      "closedAt": null,
+      "attempts": 0,
+      "notes": [],
+      "gate": null,
+      "forced": null
+    },
+    "motion": {
+      "status": "pending",
+      "openedAt": null,
+      "closedAt": null,
+      "attempts": 0,
+      "notes": [],
+      "gate": null,
+      "forced": null
+    },
+    "responsive": {
+      "status": "pending",
+      "openedAt": null,
+      "closedAt": null,
+      "attempts": 0,
+      "notes": [],
+      "gate": null,
+      "forced": null
+    },
+    "review": {
+      "status": "pending",
+      "openedAt": null,
+      "closedAt": null,
+      "attempts": 0,
+      "notes": [],
+      "gate": null,
+      "forced": null
+    }
+  },
+  "finish": null,
+  "plates": {}
+}

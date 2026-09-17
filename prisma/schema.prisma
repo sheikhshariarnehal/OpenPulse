@@ -1,0 +1,126 @@
+// OpenPulse Database Schema (PostgreSQL 16)
+// Defines relational metadata, user authentication, workspaces, apps, and API credentials.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String            @id @default(uuid())
+  email        String            @unique
+  passwordHash String            @map("password_hash")
+  name         String
+  avatarUrl    String?           @map("avatar_url")
+  systemRole   String            @default("user") @map("system_role")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @default(now()) @updatedAt @map("updated_at")
+
+  // Relationships
+  ownedWorkspaces Workspace[]    @relation("WorkspaceOwner")
+  memberships     WorkspaceMember[]
+
+  @@map("users")
+}
+
+model Workspace {
+  id        String            @id @default(uuid())
+  name      String
+  slug      String            @unique
+  tier      String            @default("free") // free, pro, enterprise
+  ownerId   String            @map("owner_id")
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @default(now()) @updatedAt @map("updated_at")
+
+  // Relationships
+  owner     User              @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members   WorkspaceMember[]
+  apps      AppProject[]
+  events    TelemetryEventMirror[]
+
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
+  id          String    @id @default(uuid())
+  workspaceId String    @map("workspace_id")
+  userId      String    @map("user_id")
+  role        String    @default("member") // owner, admin, member, viewer
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // Relationships
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+  @@index([workspaceId])
+  @@map("workspace_members")
+}
+
+model AppProject {
+  id          String                 @id @default(uuid())
+  workspaceId String                 @map("workspace_id")
+  name        String
+  platform    String                 // web, android, desktop, backend
+  framework   String                 // nextjs, react, kotlin, electron, etc.
+  apiKey      String                 @unique @map("api_key")
+  createdAt   DateTime               @default(now()) @map("created_at")
+  updatedAt   DateTime               @default(now()) @updatedAt @map("updated_at")
+
+  // Relationships
+  workspace   Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  apiKeys     ApiKey[]
+  events      TelemetryEventMirror[]
+
+  @@index([workspaceId])
+  @@map("app_projects")
+}
+
+model ApiKey {
+  id         String     @id @default(uuid())
+  appId      String     @map("app_id")
+  name       String
+  keyPrefix  String     @map("key_prefix")
+  keyHash    String     @unique @map("key_hash")
+  scopes     String     @default("write:events")
+  lastUsedAt DateTime?  @map("last_used_at")
+  revokedAt  DateTime?  @map("revoked_at")
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  // Relationships
+  app        AppProject @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  @@index([appId])
+  @@map("api_keys")
+}
+
+// Staging mirror of telemetry events stored in PostgreSQL (full immutable analytical stream lives in ClickHouse)
+model TelemetryEventMirror {
+  id          String     @id @default(uuid())
+  workspaceId String     @map("workspace_id")
+  appId       String     @map("app_id")
+  event       String
+  distinctId  String     @map("distinct_id")
+  properties  String     // JSON serialized event properties
+  timestamp   DateTime   @default(now())
+  latencyMs   Float      @default(0) @map("latency_ms")
+  status      Int        @default(200)
+  shard       String     @default("ch-ingest-01")
+  clientIp    String?    @map("client_ip")
+  userAgent   String?    @map("user_agent")
+  createdAt   DateTime   @default(now()) @map("created_at")
+
+  // Relationships
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  app         AppProject @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, timestamp])
+  @@index([appId, timestamp])
+  @@index([distinctId])
+  @@map("telemetry_events")
+}

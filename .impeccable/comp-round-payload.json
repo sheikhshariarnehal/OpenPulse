@@ -1,0 +1,43 @@
+{
+  "title": "Select the Flagship Composition for OpenPulse",
+  "question": "Three high-fidelity compositional directions have been created under the Precision Instrument Bench world. Which composition should serve as the primary north-star layout for implementation?",
+  "options": [
+    {
+      "id": "comp-1",
+      "label": "Option 1: Real-Time Waveform & Live Event Stream",
+      "kicker": "FLAGSHIP OVERVIEW",
+      "thesis": "Real-time telemetry pulse bench with etched graticule sparkline waveform, 4 core KPI stat cards, and high-density live event stream table.",
+      "palette": ["#08090d", "#06b6d4", "#10b981", "#94a3b8"],
+      "materials": ["etched graticule grid", "phosphor-cyan waveform", "JetBrains Mono metrics"],
+      "viewport": "Top KPI cards, central event throughput waveform, and bottom live event log with status pills.",
+      "hero": ".impeccable/mocks/comp-1.png",
+      "comp": ".impeccable/mocks/comp-1.png"
+    },
+    {
+      "id": "comp-2",
+      "label": "Option 2: Split-Pane Telemetry & Live Event Inspector",
+      "kicker": "DEEP INSPECTION",
+      "thesis": "Split-pane investigation layout pairing multi-channel metric graphs with a persistent slide-out JSON event payload inspector and latency breakdown.",
+      "palette": ["#090a0f", "#06b6d4", "#f59e0b", "#f1f5f9"],
+      "materials": ["split inspection pane", "syntax-highlighted JSON", "latency breakdown bar"],
+      "viewport": "Multi-metric query grid on the left, full raw event payload drawer on the right.",
+      "hero": ".impeccable/mocks/comp-2.png",
+      "comp": ".impeccable/mocks/comp-2.png"
+    },
+    {
+      "id": "comp-3",
+      "label": "Option 3: Conversion Funnels & Cohort Retention Heatmap",
+      "kicker": "ANALYTICS POWERHOUSE",
+      "thesis": "Deep conversion and retention analytics featuring horizontal step drop-off funnels, cohort retention heatmap matrix, and release health correlation.",
+      "palette": ["#090a0f", "#06b6d4", "#3b82f6", "#10b981"],
+      "materials": ["horizontal funnel bars", "color-intensity cohort heatmap", "release correlation chart"],
+      "viewport": "Top funnel drop-off steps, middle weekly retention matrix, bottom release crash-rate correlation.",
+      "hero": ".impeccable/mocks/comp-3.png",
+      "comp": ".impeccable/mocks/comp-3.png"
+    }
+  ],
+  "buildPath": {
+    "value": "comp",
+    "toggle": true
+  }
+}

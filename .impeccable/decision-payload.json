@@ -1,0 +1,126 @@
+{
+  "title": "Choose the Visual World for OpenPulse",
+  "question": "The roll assigned Signal Oscilloscope & Precision Bench. Choose the foundational design system and visual world for OpenPulse.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Signal Oscilloscope & Precision Bench",
+      "kicker": "THE ROLL",
+      "lineage": "scientific lab oscilloscopes & precision telemetry benches",
+      "thesis": "The developer analytics platform as a high-precision digital signal bench: etched graticules, phosphor pulse traces, and zero decorative SaaS fluff.",
+      "palette": [
+        "#08090d",
+        "#06b6d4",
+        "#10b981",
+        "#f59e0b",
+        "#94a3b8"
+      ],
+      "materials": [
+        "etched graticule grid",
+        "phosphor signal pulse",
+        "monospaced instrument readouts",
+        "obsidian glass"
+      ],
+      "viewport": "High-density real-time pulse stream over an etched division graticule, instant query timebases, and compact signal cards.",
+      "risk": "Can feel overly esoteric if standard data tables lose scanability.",
+      "raised": [
+        {
+          "from": "challenger-precisionist",
+          "raise": "Flat, razor-sharp architectural layout planes prevent retro-CRT novelty and anchor clean modern usability."
+        }
+      ],
+      "comp": ".impeccable/mocks/decision/assigned.png",
+      "hero": "https://impeccable.style/worlds/cards/scientific-notation-oscilloscope-signal-bench-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/scientific-notation-oscilloscope-signal-bench.webp"
+    },
+    {
+      "id": "model-pick",
+      "label": "Precision Instrument Bench",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "Modern technical IDEs and industrial telemetry workstations",
+      "thesis": "Dense, razor-sharp dark UI engineered for instantaneous query comprehension and keyboard-first navigation.",
+      "palette": [
+        "#090a0f",
+        "#11131a",
+        "#06b6d4",
+        "#f1f5f9"
+      ],
+      "materials": [
+        "hairline borders",
+        "subtle zinc surfaces",
+        "JetBrains Mono figures"
+      ],
+      "viewport": "Compact navigation rail, multi-metric KPI sparklines, and 32px dense data grid.",
+      "risk": "Closer to modern developer tools (Vercel, Grafana, Linear) but highly familiar and battle-tested."
+    },
+    {
+      "id": "challenger-precisionist",
+      "label": "Precisionist Industrial Plate",
+      "verdict": "competitive",
+      "lineage": "Hard-edged architectural planes and precisionist industrial plates",
+      "thesis": "Telemetry organized into clean, unmodulated planes lit by razor-sharp border contrast.",
+      "palette": [
+        "#0f172a",
+        "#38bdf8",
+        "#f8fafc"
+      ],
+      "materials": [
+        "architectural planes",
+        "hard light borders",
+        "stenciled metric readouts"
+      ],
+      "viewport": "Stark planar panels partitioning event ingestion from query inspection.",
+      "case": "Provides intense structural discipline and zero clutter; slightly rigid for fluid multi-series charts.",
+      "risk": "Extreme minimalism can under-communicate interactive states.",
+      "hero": "https://impeccable.style/worlds/cards/design-canon-precisionist-industrial-plate-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/design-canon-precisionist-industrial-plate.webp"
+    },
+    {
+      "id": "challenger-hypercard",
+      "label": "HyperCard Shoebox Stack",
+      "verdict": "declined",
+      "lineage": "1-bit personal computing hypermedia",
+      "palette": [
+        "#000000",
+        "#ffffff",
+        "#808080"
+      ],
+      "materials": [
+        "stipple dithering",
+        "monochrome cards"
+      ],
+      "case": "Too retro-novelty for high-velocity real-time telemetry streaming.",
+      "kept": "Card linking and immediate in-place drill-down inspection.",
+      "hero": "https://impeccable.style/worlds/cards/medium-native-hypercard-stack-shoebox-hero.webp"
+    }
+  ],
+  "reroll": {
+    "registers": [
+      "safer",
+      "bolder"
+    ]
+  },
+  "buildPath": {
+    "value": "comp",
+    "toggle": true
+  },
+  "canon": true,
+  "canonCard": {
+    "label": "Modern Dark Cloud Telemetry",
+    "thesis": "The industry-standard dark mode developer SaaS dashboard (Datadog/PostHog style) executed with high craft.",
+    "palette": [
+      "#0b0f19",
+      "#1f2937",
+      "#3b82f6",
+      "#ffffff"
+    ],
+    "materials": [
+      "elevated cards",
+      "soft glows",
+      "clean sans typography"
+    ],
+    "viewport": "Standard left sidebar, top breadcrumb bar, grid of rounded metric cards.",
+    "risk": "Indistinguishable from generic SaaS platforms; lacks distinctive OpenPulse identity."
+  },
+  "steer": true
+}

@@ -1,0 +1,5 @@
+{
+  "title": "Option 1: Real-Time Waveform & Live Event Stream",
+  "prompt": "A cutting-edge, ultra-high-density developer analytics dashboard interface named OpenPulse in a sleek dark mode. The UI is designed like a high-precision digital telemetry bench with etched graticule division lines, vivid phosphor-cyan and emerald pulse traces, and crisp monospaced telemetry figures (JetBrains Mono). Features a compact left navigation rail with icons and shortcuts, a real-time event throughput graph with sub-millisecond sparkline waveforms, KPI cards showing Ingestion Latency (0.42ms), Events/sec (32,480/s), Active Clusters (8), and Error Rate (0.02%). Below is a dense, high-contrast live event stream table with millisecond timestamps, colorful status badges (200 OK, 202 ACCEPTED), and event name pills. Clean, utilitarian, technical aesthetic, zero empty fluff. Professional engineering workstation interface.",
+  "approved": true
+}

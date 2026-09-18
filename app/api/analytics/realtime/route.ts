@@ -10,12 +10,12 @@ export async function GET(req: NextRequest) {
   const workspaceSlug = searchParams.get('workspace') || '';
   const appId = searchParams.get('appId') || undefined;
 
-  const workspace = db.getWorkspaceBySlug(workspaceSlug)
-    || db.getWorkspacesForUser(user.id)[0];
+  const workspace = (await db.getWorkspaceBySlug(workspaceSlug))
+    || (await db.getWorkspacesForUser(user.id))[0];
 
   if (!workspace) return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
 
-  const realtime = db.getRealtimeActiveUsers(workspace.id, appId);
+  const realtime = await db.getRealtimeActiveUsers(workspace.id, appId);
 
   return NextResponse.json({ realtime });
 }

@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ authenticated: false, user: null, workspaces: [] }, { status: 401 });
   }
 
-  const workspaces = db.getWorkspacesForUser(user.id);
+  const workspaces = await db.getWorkspacesForUser(user.id);
   return NextResponse.json({
     authenticated: true,
     user: { id: user.id, name: user.name, email: user.email },

@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const workspaces = db.getWorkspacesForUser(user.id);
+  const workspaces = await db.getWorkspacesForUser(user.id);
   return NextResponse.json({ workspaces });
 }
 
@@ -27,10 +27,10 @@ export async function POST(req: NextRequest) {
     }
 
     const wsSlug = slug || name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-    const ws = db.createWorkspace(user.id, name.trim(), wsSlug, tier || 'Dedicated ClickHouse');
+    const ws = await db.createWorkspace(user.id, name.trim(), wsSlug, tier || 'Dedicated ClickHouse');
 
     // Automatically create a default project app for the new workspace
-    const defaultApp = db.createApp(ws.id, `${name} App`, 'web', 'nextjs');
+    const defaultApp = await db.createApp(ws.id, `${name} App`, 'web', 'nextjs');
 
     return NextResponse.json({ success: true, workspace: ws, defaultApp });
   } catch (err: any) {

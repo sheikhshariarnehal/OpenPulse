@@ -6,7 +6,7 @@ import { db } from '@/lib/db';
 export default async function HomePage() {
   const user = await getCurrentUser();
   if (user) {
-    const workspaces = db.getWorkspacesForUser(user.id);
+    const workspaces = await db.getWorkspacesForUser(user.id);
     if (workspaces.length > 0) {
       redirect(`/${workspaces[0].slug}`);
     }

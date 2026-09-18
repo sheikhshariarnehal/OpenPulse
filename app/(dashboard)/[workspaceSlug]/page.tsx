@@ -19,16 +19,16 @@ export default async function WorkspaceDashboardPage({
   const user = await getCurrentUser();
   if (!user) return notFound();
 
-  const workspaces = db.getWorkspacesForUser(user.id);
-  const currentWs = db.getWorkspaceBySlug(workspaceSlug);
+  const workspaces = await db.getWorkspacesForUser(user.id);
+  const currentWs = await db.getWorkspaceBySlug(workspaceSlug);
   if (!currentWs) return notFound();
 
-  const apps = db.getAppsForWorkspace(currentWs.id);
-  const stats = db.getStats(currentWs.id);
-  const events = db.getEvents(currentWs.id, 50);
+  const apps = await db.getAppsForWorkspace(currentWs.id);
+  const stats = await db.getStats(currentWs.id);
+  const events = await db.getEvents(currentWs.id, 50);
   const isChAlive = await pingClickHouse();
 
-  const allEvents = db.getEvents(currentWs.id, 1000);
+  const allEvents = await db.getEvents(currentWs.id, 1000);
   const totalCount = allEvents.length;
 
   const colors = ['#38bdf8', '#10b981', '#f59e0b', '#a855f7', '#ec4899'];

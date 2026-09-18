@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { prisma } from '@/lib/prisma';
 import { createSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
@@ -12,23 +11,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email and password are required.' }, { status: 400 });
     }
 
-    let user = db.getUserByEmail(email.trim());
-    if (!user) {
-      try {
-        const dbUser = await prisma.user.findUnique({
-          where: { email: email.trim().toLowerCase() }
-        });
-        if (dbUser) {
-          user = {
-            id: dbUser.id,
-            name: dbUser.name,
-            email: dbUser.email,
-            passwordHash: dbUser.passwordHash,
-            createdAt: dbUser.createdAt.toISOString()
-          };
-        }
-      } catch (err) {}
-    }
+    let user = await db.getUserByEmail(email.trim());
 
     if (!user) {
       return NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 });
@@ -40,24 +23,7 @@ export async function POST(req: NextRequest) {
     }
 
     const token = createSessionToken(user.id, user.email);
-    let workspaces = db.getWorkspacesForUser(user.id);
-    if (!workspaces || workspaces.length === 0) {
-      try {
-        const dbWorkspaces = await prisma.workspace.findMany({
-          where: { ownerId: user.id }
-        });
-        if (dbWorkspaces && dbWorkspaces.length > 0) {
-          workspaces = dbWorkspaces.map(w => ({
-            id: w.id,
-            name: w.name,
-            slug: w.slug,
-            tier: w.tier,
-            ownerId: w.ownerId,
-            createdAt: w.createdAt.toISOString()
-          }));
-        }
-      } catch (err) {}
-    }
+    const workspaces = await db.getWorkspacesForUser(user.id);
     const activeWorkspace = workspaces[0] || null;
 
     const response = NextResponse.json({

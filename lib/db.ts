@@ -109,9 +109,7 @@ export interface AnalyticsReport {
   realtime: RealtimeData;
 }
 
-// ---- File paths ----
-// On Vercel (and other serverless runtimes) process.cwd() is read-only (/var/task).
-// Fall back to /tmp which is the only writable directory in serverless environments.
+// ---- File paths & Fallback Storage ----
 const IS_SERVERLESS =
   process.env.VERCEL === '1' ||
   process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined ||
@@ -135,8 +133,6 @@ function ensureDataDir(): void {
 function hashPassword(password: string): string {
   return crypto.createHash('sha256').update(password + '_openpulse_salt_2026').digest('hex');
 }
-
-
 
 function getInitialDatabase(): DatabaseSchema {
   const users: User[] = [
@@ -235,12 +231,39 @@ function writeDb(data: DatabaseSchema): void {
     fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8');
     fs.renameSync(tmp, DB_FILE);
   } catch {
-    // Serverless / read-only filesystem: writes are silently skipped.
-    // Persistent state is handled by Supabase/Prisma via the async mirror.
+    // Serverless / read-only filesystem writes are silently skipped
   }
 }
 
 // ---- Helpers ----
+function mapPrismaEventToTelemetryEvent(row: any): TelemetryEvent {
+  let props: Record<string, any> = {};
+  if (typeof row.properties === 'string') {
+    try {
+      props = JSON.parse(row.properties);
+    } catch {
+      props = {};
+    }
+  } else if (typeof row.properties === 'object' && row.properties !== null) {
+    props = row.properties;
+  }
+
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    appId: row.appId,
+    event: row.event,
+    distinctId: row.distinctId,
+    properties: props,
+    timestamp: row.timestamp instanceof Date ? row.timestamp.toISOString() : String(row.timestamp),
+    latencyMs: Number(row.latencyMs || 0),
+    status: Number(row.status || 200),
+    shard: row.shard || 'ch-ingest-01',
+    clientIp: row.clientIp || undefined,
+    userAgent: row.userAgent || undefined,
+  };
+}
+
 function parseBrowser(ua: string = '', props: Record<string, any> = {}): string {
   if (props.browser) return props.browser;
   const src = ua;
@@ -283,13 +306,28 @@ function topN(counts: Record<string, number>, total: number, n = 10): TopEntry[]
     }));
 }
 
-// ---- Public DB API ----
+// ---- Public DB API backed by Supabase PostgreSQL (Prisma) ----
 export const db = {
   // ── Users ──────────────────────────────────────────────────────────
-  getUserByEmail(email: string): User | undefined {
+  async getUserByEmail(email: string): Promise<User | undefined> {
     const lower = (email || '').trim().toLowerCase();
-    const found = readDb().users.find(u => u.email.toLowerCase() === lower);
-    if (found) return found;
+    try {
+      const found = await prisma.user.findUnique({ where: { email: lower } });
+      if (found) {
+        return {
+          id: found.id,
+          name: found.name,
+          email: found.email,
+          passwordHash: found.passwordHash,
+          createdAt: found.createdAt.toISOString()
+        };
+      }
+    } catch {
+      // fallback
+    }
+
+    const localFound = readDb().users.find(u => u.email.toLowerCase() === lower);
+    if (localFound) return localFound;
     if (lower === 'sheikhshariarnehal@gmail.com') {
       return {
         id: 'usr_dec491ef',
@@ -311,9 +349,24 @@ export const db = {
     return undefined;
   },
 
-  getUserById(id: string): User | undefined {
-    const found = readDb().users.find(u => u.id === id);
-    if (found) return found;
+  async getUserById(id: string): Promise<User | undefined> {
+    try {
+      const found = await prisma.user.findUnique({ where: { id } });
+      if (found) {
+        return {
+          id: found.id,
+          name: found.name,
+          email: found.email,
+          passwordHash: found.passwordHash,
+          createdAt: found.createdAt.toISOString()
+        };
+      }
+    } catch {
+      // fallback
+    }
+
+    const localFound = readDb().users.find(u => u.id === id);
+    if (localFound) return localFound;
     if (id === 'usr_dec491ef') {
       return {
         id: 'usr_dec491ef',
@@ -335,7 +388,7 @@ export const db = {
     return undefined;
   },
 
-  createUser(name: string, email: string, password: string): { user: User; defaultWorkspace: Workspace; defaultApp: AppProject } {
+  async createUser(name: string, email: string, password: string): Promise<{ user: User; defaultWorkspace: Workspace; defaultApp: AppProject }> {
     const data = readDb();
     if (data.users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
       throw new Error('An account with this email already exists.');
@@ -347,29 +400,32 @@ export const db = {
     const defaultWorkspace: Workspace = { id: wsId, name: `${name}'s Workspace`, slug: wsSlug, tier: 'Pro Sandbox', ownerId: userId, createdAt: new Date().toISOString() };
     const appId = 'app_' + crypto.randomBytes(4).toString('hex');
     const defaultApp: AppProject = { id: appId, workspaceId: wsId, name: 'Primary Web App', platform: 'web', framework: 'nextjs', apiKey: 'op_live_' + crypto.randomBytes(16).toString('hex'), createdAt: new Date().toISOString() };
+
     data.users.push(user);
     data.workspaces.push(defaultWorkspace);
     data.apps.push(defaultApp);
     writeDb(data);
 
-    // Sync to Supabase Cloud PostgreSQL
-    prisma.user.upsert({
-      where: { id: user.id },
-      update: { name: user.name, passwordHash: user.passwordHash },
-      create: { id: user.id, email: user.email, name: user.name, passwordHash: user.passwordHash, systemRole: 'user', createdAt: new Date(user.createdAt) }
-    }).then(() => {
-      prisma.workspace.upsert({
+    // Sync directly to Supabase Cloud PostgreSQL
+    try {
+      await prisma.user.upsert({
+        where: { id: user.id },
+        update: { name: user.name, passwordHash: user.passwordHash },
+        create: { id: user.id, email: user.email, name: user.name, passwordHash: user.passwordHash, systemRole: 'user', createdAt: new Date(user.createdAt) }
+      });
+      await prisma.workspace.upsert({
         where: { id: defaultWorkspace.id },
         update: { name: defaultWorkspace.name, slug: defaultWorkspace.slug },
         create: { id: defaultWorkspace.id, name: defaultWorkspace.name, slug: defaultWorkspace.slug, tier: defaultWorkspace.tier, ownerId: user.id, createdAt: new Date(defaultWorkspace.createdAt) }
-      }).then(() => {
-        prisma.appProject.upsert({
-          where: { id: defaultApp.id },
-          update: { name: defaultApp.name },
-          create: { id: defaultApp.id, workspaceId: defaultWorkspace.id, name: defaultApp.name, platform: defaultApp.platform, framework: defaultApp.framework, apiKey: defaultApp.apiKey, createdAt: new Date(defaultApp.createdAt) }
-        }).catch(() => {});
-      }).catch(() => {});
-    }).catch(() => {});
+      });
+      await prisma.appProject.upsert({
+        where: { id: defaultApp.id },
+        update: { name: defaultApp.name },
+        create: { id: defaultApp.id, workspaceId: defaultWorkspace.id, name: defaultApp.name, platform: defaultApp.platform, framework: defaultApp.framework, apiKey: defaultApp.apiKey, createdAt: new Date(defaultApp.createdAt) }
+      });
+    } catch (e) {
+      console.warn('[Prisma createUser sync warning]:', e);
+    }
 
     return { user, defaultWorkspace, defaultApp };
   },
@@ -381,7 +437,26 @@ export const db = {
   },
 
   // ── Workspaces ─────────────────────────────────────────────────────
-  getWorkspacesForUser(userId: string): Workspace[] {
+  async getWorkspacesForUser(userId: string): Promise<Workspace[]> {
+    try {
+      const rows = await prisma.workspace.findMany({
+        where: { ownerId: userId },
+        orderBy: { createdAt: 'desc' }
+      });
+      if (rows.length > 0) {
+        return rows.map(w => ({
+          id: w.id,
+          name: w.name,
+          slug: w.slug,
+          tier: w.tier,
+          ownerId: w.ownerId,
+          createdAt: w.createdAt.toISOString()
+        }));
+      }
+    } catch {
+      // fallback
+    }
+
     const list = readDb().workspaces.filter(w => w.ownerId === userId);
     if (list.length > 0) return list;
     if (userId === 'usr_dec491ef') {
@@ -399,7 +474,30 @@ export const db = {
     return readDb().workspaces;
   },
 
-  getWorkspaceBySlug(slug: string): Workspace | undefined {
+  async getWorkspaceBySlug(slug: string): Promise<Workspace | undefined> {
+    try {
+      // Support matching either the exact slug or common aliases like cloudstream -> cloudstream-7283
+      const targetSlug = slug === 'cloudstream' ? 'cloudstream-7283' : slug;
+      let found = await prisma.workspace.findUnique({
+        where: { slug: targetSlug }
+      });
+      if (!found && slug !== targetSlug) {
+        found = await prisma.workspace.findUnique({ where: { slug } });
+      }
+      if (found) {
+        return {
+          id: found.id,
+          name: found.name,
+          slug: found.slug,
+          tier: found.tier,
+          ownerId: found.ownerId,
+          createdAt: found.createdAt.toISOString()
+        };
+      }
+    } catch {
+      // fallback
+    }
+
     const found = readDb().workspaces.find(w => w.slug === slug);
     if (found) return found;
     if (slug === 'cloudstream-7283' || slug === 'cloudstream') {
@@ -415,7 +513,23 @@ export const db = {
     return undefined;
   },
 
-  getWorkspaceById(id: string): Workspace | undefined {
+  async getWorkspaceById(id: string): Promise<Workspace | undefined> {
+    try {
+      const found = await prisma.workspace.findUnique({ where: { id } });
+      if (found) {
+        return {
+          id: found.id,
+          name: found.name,
+          slug: found.slug,
+          tier: found.tier,
+          ownerId: found.ownerId,
+          createdAt: found.createdAt.toISOString()
+        };
+      }
+    } catch {
+      // fallback
+    }
+
     const found = readDb().workspaces.find(w => w.id === id);
     if (found) return found;
     if (id === 'ws_8b25c3e1') {
@@ -431,30 +545,58 @@ export const db = {
     return undefined;
   },
 
-  createWorkspace(userId: string, name: string, slug: string, tier = 'Dedicated ClickHouse'): Workspace {
+  async createWorkspace(userId: string, name: string, slug: string, tier = 'Dedicated ClickHouse'): Promise<Workspace> {
     const data = readDb();
     let finalSlug = slug.toLowerCase().replace(/[^a-z0-9-]/g, '-');
     if (data.workspaces.some(w => w.slug === finalSlug)) {
       finalSlug += '-' + crypto.randomBytes(2).toString('hex');
     }
-    const ws: Workspace = { id: 'ws_' + crypto.randomBytes(4).toString('hex'), name, slug: finalSlug, tier, ownerId: userId, createdAt: new Date().toISOString() };
+    const ws: Workspace = {
+      id: 'ws_' + crypto.randomBytes(4).toString('hex'),
+      name,
+      slug: finalSlug,
+      tier,
+      ownerId: userId,
+      createdAt: new Date().toISOString()
+    };
     data.workspaces.push(ws);
     writeDb(data);
 
-    // Sync to Supabase Cloud PostgreSQL
-    prisma.workspace.upsert({
-      where: { id: ws.id },
-      update: { name: ws.name, slug: ws.slug, tier: ws.tier },
-      create: { id: ws.id, name: ws.name, slug: ws.slug, tier: ws.tier, ownerId: ws.ownerId, createdAt: new Date(ws.createdAt) }
-    }).catch((err: any) => {
+    try {
+      await prisma.workspace.upsert({
+        where: { id: ws.id },
+        update: { name: ws.name, slug: ws.slug, tier: ws.tier },
+        create: { id: ws.id, name: ws.name, slug: ws.slug, tier: ws.tier, ownerId: ws.ownerId, createdAt: new Date(ws.createdAt) }
+      });
+    } catch (err: any) {
       console.error('[Supabase Workspace Sync Error]:', err?.message || err);
-    });
+    }
 
     return ws;
   },
 
   // ── Apps ───────────────────────────────────────────────────────────
-  getAppsForWorkspace(workspaceId: string): AppProject[] {
+  async getAppsForWorkspace(workspaceId: string): Promise<AppProject[]> {
+    try {
+      const rows = await prisma.appProject.findMany({
+        where: { workspaceId },
+        orderBy: { createdAt: 'desc' }
+      });
+      if (rows.length > 0) {
+        return rows.map(a => ({
+          id: a.id,
+          workspaceId: a.workspaceId,
+          name: a.name,
+          platform: a.platform as any,
+          framework: a.framework,
+          apiKey: a.apiKey,
+          createdAt: a.createdAt.toISOString()
+        }));
+      }
+    } catch {
+      // fallback
+    }
+
     const list = readDb().apps.filter(a => a.workspaceId === workspaceId);
     if (list.length > 0) return list;
     if (workspaceId === 'ws_8b25c3e1' || workspaceId === 'ws_cloudstream_7283') {
@@ -473,7 +615,26 @@ export const db = {
     return list;
   },
 
-  getAppByApiKey(apiKey: string): AppProject | undefined {
+  async getAppByApiKey(apiKey: string): Promise<AppProject | undefined> {
+    try {
+      const found = await prisma.appProject.findUnique({
+        where: { apiKey }
+      });
+      if (found) {
+        return {
+          id: found.id,
+          workspaceId: found.workspaceId,
+          name: found.name,
+          platform: found.platform as any,
+          framework: found.framework,
+          apiKey: found.apiKey,
+          createdAt: found.createdAt.toISOString()
+        };
+      }
+    } catch {
+      // fallback
+    }
+
     const found = readDb().apps.find(a => a.apiKey === apiKey);
     if (found) return found;
     if (apiKey === 'op_live_931be7475138b7a5888fd00589f5567c') {
@@ -490,45 +651,68 @@ export const db = {
     return undefined;
   },
 
-  getAppById(appId: string): AppProject | undefined {
+  async getAppById(appId: string): Promise<AppProject | undefined> {
+    try {
+      const found = await prisma.appProject.findUnique({ where: { id: appId } });
+      if (found) {
+        return {
+          id: found.id,
+          workspaceId: found.workspaceId,
+          name: found.name,
+          platform: found.platform as any,
+          framework: found.framework,
+          apiKey: found.apiKey,
+          createdAt: found.createdAt.toISOString()
+        };
+      }
+    } catch {}
     return readDb().apps.find(a => a.id === appId);
   },
 
-  createApp(workspaceId: string, name: string, platform: 'web' | 'android' | 'desktop' | 'backend', framework: string): AppProject {
+  async createApp(workspaceId: string, name: string, platform: 'web' | 'android' | 'desktop' | 'backend', framework: string): Promise<AppProject> {
     const data = readDb();
-    const app: AppProject = { id: 'app_' + crypto.randomBytes(4).toString('hex'), workspaceId, name, platform, framework, apiKey: 'op_live_' + crypto.randomBytes(16).toString('hex'), createdAt: new Date().toISOString() };
+    const app: AppProject = {
+      id: 'app_' + crypto.randomBytes(4).toString('hex'),
+      workspaceId,
+      name,
+      platform,
+      framework,
+      apiKey: 'op_live_' + crypto.randomBytes(16).toString('hex'),
+      createdAt: new Date().toISOString()
+    };
     data.apps.push(app);
     writeDb(data);
 
-    // Sync to Supabase Cloud PostgreSQL
-    prisma.appProject.upsert({
-      where: { id: app.id },
-      update: { name: app.name, platform: app.platform, framework: app.framework, apiKey: app.apiKey },
-      create: { id: app.id, workspaceId: app.workspaceId, name: app.name, platform: app.platform, framework: app.framework, apiKey: app.apiKey, createdAt: new Date(app.createdAt) }
-    }).catch((err: any) => {
+    try {
+      await prisma.appProject.upsert({
+        where: { id: app.id },
+        update: { name: app.name, platform: app.platform, framework: app.framework, apiKey: app.apiKey },
+        create: { id: app.id, workspaceId: app.workspaceId, name: app.name, platform: app.platform, framework: app.framework, apiKey: app.apiKey, createdAt: new Date(app.createdAt) }
+      });
+    } catch (err: any) {
       console.error('[Supabase App Sync Error]:', err?.message || err);
-    });
+    }
 
     return app;
   },
 
-  deleteApp(appId: string): boolean {
+  async deleteApp(appId: string): Promise<boolean> {
     const data = readDb();
     const before = data.apps.length;
     data.apps = data.apps.filter(a => a.id !== appId);
-    if (data.apps.length === before) return false;
     writeDb(data);
 
-    // Sync to Supabase Cloud PostgreSQL
-    prisma.appProject.delete({
-      where: { id: appId }
-    }).catch(() => {});
+    try {
+      await prisma.appProject.delete({
+        where: { id: appId }
+      });
+    } catch {}
 
-    return true;
+    return data.apps.length < before;
   },
 
   // ── Events ────────────────────────────────────────────────────────
-  recordEvent(eventData: Omit<TelemetryEvent, 'id' | 'timestamp' | 'shard'>): TelemetryEvent {
+  async recordEvent(eventData: Omit<TelemetryEvent, 'id' | 'timestamp' | 'shard'>): Promise<TelemetryEvent> {
     const data = readDb();
     const shards = ['ch-ingest-01', 'ch-ingest-02', 'ch-ingest-03', 'ch-ingest-04'];
     const newEvent: TelemetryEvent = {
@@ -541,7 +725,29 @@ export const db = {
     if (data.events.length > 1000) data.events = data.events.slice(0, 1000);
     writeDb(data);
 
-    // Asynchronously mirror to ClickHouse if reachable
+    // Persist directly to Supabase Cloud PostgreSQL
+    try {
+      await prisma.telemetryEventMirror.create({
+        data: {
+          id: newEvent.id,
+          workspaceId: newEvent.workspaceId,
+          appId: newEvent.appId,
+          event: newEvent.event,
+          distinctId: newEvent.distinctId,
+          properties: JSON.stringify(newEvent.properties || {}),
+          timestamp: new Date(newEvent.timestamp),
+          latencyMs: newEvent.latencyMs,
+          status: newEvent.status,
+          shard: newEvent.shard,
+          clientIp: newEvent.clientIp,
+          userAgent: newEvent.userAgent
+        }
+      });
+    } catch (err: any) {
+      console.error('[Supabase Prisma Mirror Error]:', err?.message || err);
+    }
+
+    // Mirror to ClickHouse if reachable
     pingClickHouse().then(ok => {
       if (ok) {
         clickhouse.insert({
@@ -565,37 +771,65 @@ export const db = {
       }
     }).catch(() => {});
 
-    // Asynchronously mirror to Supabase PostgreSQL Prisma if reachable
-    prisma.telemetryEventMirror.create({
-      data: {
-        id: newEvent.id,
-        workspaceId: newEvent.workspaceId,
-        appId: newEvent.appId,
-        event: newEvent.event,
-        distinctId: newEvent.distinctId,
-        properties: JSON.stringify(newEvent.properties || {}),
-        timestamp: new Date(newEvent.timestamp),
-        latencyMs: newEvent.latencyMs,
-        status: newEvent.status,
-        shard: newEvent.shard,
-        clientIp: newEvent.clientIp,
-        userAgent: newEvent.userAgent
-      }
-    }).catch((err: any) => {
-      console.error('[Supabase Prisma Mirror Error]:', err?.message || err);
-    });
-
     return newEvent;
   },
 
-  getEvents(workspaceId: string, limit = 50, appId?: string): TelemetryEvent[] {
+  async getEvents(workspaceId: string, limit = 50, appId?: string): Promise<TelemetryEvent[]> {
+    try {
+      const rows = await prisma.telemetryEventMirror.findMany({
+        where: {
+          workspaceId,
+          ...(appId ? { appId } : {})
+        },
+        orderBy: { timestamp: 'desc' },
+        take: limit
+      });
+      if (rows.length > 0) {
+        return rows.map(mapPrismaEventToTelemetryEvent);
+      }
+    } catch (err) {
+      console.warn('[Prisma getEvents error]:', err);
+    }
+
     const data = readDb();
     let evts = data.events.filter(e => e.workspaceId === workspaceId);
     if (appId) evts = evts.filter(e => e.appId === appId);
     return evts.slice(0, limit);
   },
 
-  getStats(workspaceId: string) {
+  async getStats(workspaceId: string) {
+    try {
+      const totalCount = await prisma.telemetryEventMirror.count({
+        where: { workspaceId }
+      });
+      const errorCount = await prisma.telemetryEventMirror.count({
+        where: { workspaceId, status: { gte: 400 } }
+      });
+      const recentRows = await prisma.telemetryEventMirror.findMany({
+        where: { workspaceId },
+        orderBy: { timestamp: 'desc' },
+        take: 15
+      });
+      const recentEvents = recentRows.map(mapPrismaEventToTelemetryEvent);
+      const errorRate = totalCount > 0 ? ((errorCount / totalCount) * 100).toFixed(2) + '%' : '0.00%';
+
+      let totalLatency = 0;
+      recentEvents.forEach(e => { totalLatency += (e.latencyMs || 0); });
+      const avgLatency = recentEvents.length > 0 ? (totalLatency / recentEvents.length).toFixed(2) + ' ms' : '0.00 ms';
+
+      if (totalCount > 0) {
+        return {
+          totalEvents: totalCount,
+          p95Latency: avgLatency,
+          activeNodes: '1 Node (Supabase PG)',
+          errorRate,
+          recentEvents
+        };
+      }
+    } catch (err) {
+      console.warn('[Prisma getStats error]:', err);
+    }
+
     const data = readDb();
     const wsEvents = data.events.filter(e => e.workspaceId === workspaceId);
     const count = wsEvents.length;
@@ -604,36 +838,56 @@ export const db = {
     let totalLatency = 0;
     wsEvents.forEach(e => { totalLatency += (e.latencyMs || 0); });
     const p95 = count > 0 ? (totalLatency / count).toFixed(2) + ' ms' : '0.00 ms';
+
     return {
       totalEvents: count,
       p95Latency: p95,
-      activeNodes: '1 Node (Docker CH)',
+      activeNodes: '1 Node (Local Fallback)',
       errorRate,
       recentEvents: wsEvents.slice(0, 15)
     };
   },
 
   // ── Analytics ─────────────────────────────────────────────────────
-  getAnalyticsReport(workspaceId: string, options: { days?: number; appId?: string } = {}): AnalyticsReport {
-    const data = readDb();
+  async getAnalyticsReport(workspaceId: string, options: { days?: number; appId?: string } = {}): Promise<AnalyticsReport> {
     const days = options.days || 30;
-    const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000;
+    const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-    let events = data.events.filter(e =>
-      e.workspaceId === workspaceId &&
-      new Date(e.timestamp).getTime() >= cutoffMs
-    );
-    if (options.appId) events = events.filter(e => e.appId === options.appId);
+    let events: TelemetryEvent[] = [];
+    try {
+      const rows = await prisma.telemetryEventMirror.findMany({
+        where: {
+          workspaceId,
+          ...(options.appId ? { appId: options.appId } : {}),
+          timestamp: { gte: cutoffDate }
+        },
+        orderBy: { timestamp: 'asc' }
+      });
+      events = rows.map(mapPrismaEventToTelemetryEvent);
+    } catch (err) {
+      console.warn('[Prisma getAnalyticsReport warning]:', err);
+      const data = readDb();
+      events = data.events.filter(e =>
+        e.workspaceId === workspaceId &&
+        new Date(e.timestamp).getTime() >= cutoffDate.getTime() &&
+        (!options.appId || e.appId === options.appId)
+      );
+    }
 
     const totalEvents = events.length;
     const uniqueVisitorSet = new Set(events.map(e => e.distinctId));
     const uniqueVisitors = uniqueVisitorSet.size;
 
-    // Sessions: rough approximation — each user has ~1.4 sessions
+    // Sessions: estimated sessions
     const totalSessions = Math.ceil(uniqueVisitors * 1.4);
 
     // Pageviews
-    const pageviews = events.filter(e => e.event === '$pageview' || e.event === '$screen_view' || Boolean(e.properties?.path) || Boolean(e.properties?.screen)).length;
+    const pageviews = events.filter(e =>
+      e.event === '$pageview' ||
+      e.event === '$screen_view' ||
+      Boolean(e.properties?.path) ||
+      Boolean(e.properties?.screen)
+    ).length;
 
     // Chart data by day
     const chartData: DayBucket[] = [];
@@ -654,7 +908,12 @@ export const db = {
         date: dayStart.toISOString().split('T')[0],
         visitors: dayVisitors,
         sessions: Math.ceil(dayVisitors * 1.4),
-        pageviews: dayEvts.filter(e => e.event === '$pageview' || e.event === '$screen_view' || Boolean(e.properties?.path) || Boolean(e.properties?.screen)).length
+        pageviews: dayEvts.filter(e =>
+          e.event === '$pageview' ||
+          e.event === '$screen_view' ||
+          Boolean(e.properties?.path) ||
+          Boolean(e.properties?.screen)
+        ).length
       });
     }
 
@@ -700,16 +959,18 @@ export const db = {
       refCounts[label] = (refCounts[label] || 0) + 1;
     });
 
-    // New vs returning (simplistic: users with only 1 event = new)
+    // New vs returning
     const userEventCount: Record<string, number> = {};
     events.forEach(e => { userEventCount[e.distinctId] = (userEventCount[e.distinctId] || 0) + 1; });
     let newUsers = 0, returningUsers = 0;
     Object.values(userEventCount).forEach(c => { if (c === 1) newUsers++; else returningUsers++; });
 
-    // Average session duration (simulated based on events/user)
-    const avgEventsPerUser = uniqueVisitors > 0 ? (totalEvents / uniqueVisitors) : 1;
+    // Average session duration
+    const avgEventsPerUser = uniqueVisitors > 0 ? (totalEvents / uniqueVisitors) : 0;
     const avgDurationSecs = Math.floor(avgEventsPerUser * 45);
-    const avgDuration = avgDurationSecs > 60
+    const avgDuration = totalEvents === 0
+      ? '0s'
+      : avgDurationSecs > 60
       ? `${Math.floor(avgDurationSecs / 60)}m ${avgDurationSecs % 60}s`
       : `${avgDurationSecs}s`;
 
@@ -749,11 +1010,7 @@ export const db = {
 
     // Real-time active users (events in last 2 minutes)
     const realtimeCutoffMs = Date.now() - 2 * 60 * 1000;
-    let realtimeEvts = data.events.filter(e =>
-      e.workspaceId === workspaceId &&
-      new Date(e.timestamp).getTime() >= realtimeCutoffMs
-    );
-    if (options.appId) realtimeEvts = realtimeEvts.filter(e => e.appId === options.appId);
+    const realtimeEvts = events.filter(e => new Date(e.timestamp).getTime() >= realtimeCutoffMs);
 
     const realtimeActiveUsers = new Set(realtimeEvts.map(e => e.distinctId)).size;
 
@@ -807,14 +1064,27 @@ export const db = {
     };
   },
 
-  getRealtimeActiveUsers(workspaceId: string, appId?: string): RealtimeData {
-    const data = readDb();
-    const cutoff2m = Date.now() - 2 * 60 * 1000;
-    let evts = data.events.filter(e =>
-      e.workspaceId === workspaceId &&
-      new Date(e.timestamp).getTime() >= cutoff2m
-    );
-    if (appId) evts = evts.filter(e => e.appId === appId);
+  async getRealtimeActiveUsers(workspaceId: string, appId?: string): Promise<RealtimeData> {
+    const cutoff2m = new Date(Date.now() - 2 * 60 * 1000);
+    let evts: TelemetryEvent[] = [];
+    try {
+      const rows = await prisma.telemetryEventMirror.findMany({
+        where: {
+          workspaceId,
+          ...(appId ? { appId } : {}),
+          timestamp: { gte: cutoff2m }
+        },
+        orderBy: { timestamp: 'desc' }
+      });
+      evts = rows.map(mapPrismaEventToTelemetryEvent);
+    } catch {
+      const data = readDb();
+      evts = data.events.filter(e =>
+        e.workspaceId === workspaceId &&
+        new Date(e.timestamp).getTime() >= cutoff2m.getTime() &&
+        (!appId || e.appId === appId)
+      );
+    }
 
     const activeUsers = new Set(evts.map(e => e.distinctId)).size;
 
@@ -845,10 +1115,21 @@ export const db = {
     };
   },
 
-  getUsersList(workspaceId: string, options: { appId?: string; limit?: number } = {}): UserSummary[] {
-    const data = readDb();
-    let events = data.events.filter(e => e.workspaceId === workspaceId);
-    if (options.appId) events = events.filter(e => e.appId === options.appId);
+  async getUsersList(workspaceId: string, options: { appId?: string; limit?: number } = {}): Promise<UserSummary[]> {
+    let events: TelemetryEvent[] = [];
+    try {
+      const rows = await prisma.telemetryEventMirror.findMany({
+        where: {
+          workspaceId,
+          ...(options.appId ? { appId: options.appId } : {})
+        },
+        orderBy: { timestamp: 'desc' }
+      });
+      events = rows.map(mapPrismaEventToTelemetryEvent);
+    } catch {
+      const data = readDb();
+      events = data.events.filter(e => e.workspaceId === workspaceId && (!options.appId || e.appId === options.appId));
+    }
 
     const userMap: Record<string, TelemetryEvent[]> = {};
     events.forEach(e => {
@@ -870,7 +1151,7 @@ export const db = {
           firstSeen: sorted[0]?.timestamp || '',
           lastSeen: latestEvt?.timestamp || '',
           topEvent,
-          country: latestEvt?.properties?.country || 'US',
+          country: latestEvt?.properties?.country || 'Bangladesh',
           browser: parseBrowser(latestEvt?.userAgent, latestEvt?.properties)
         };
       })
@@ -878,7 +1159,21 @@ export const db = {
       .slice(0, options.limit || 100);
   },
 
-  getUserActivity(workspaceId: string, distinctId: string): TelemetryEvent[] {
+  async getUserActivity(workspaceId: string, distinctId: string): Promise<TelemetryEvent[]> {
+    try {
+      const rows = await prisma.telemetryEventMirror.findMany({
+        where: {
+          workspaceId,
+          distinctId
+        },
+        orderBy: { timestamp: 'desc' },
+        take: 100
+      });
+      if (rows.length > 0) {
+        return rows.map(mapPrismaEventToTelemetryEvent);
+      }
+    } catch {}
+
     return readDb().events
       .filter(e => e.workspaceId === workspaceId && e.distinctId === distinctId)
       .slice(0, 100);

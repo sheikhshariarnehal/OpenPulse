@@ -13,11 +13,11 @@ export async function GET(
   const { searchParams } = new URL(req.url);
   const workspaceSlug = searchParams.get('workspace') || '';
 
-  const workspace = db.getWorkspaceBySlug(workspaceSlug)
-    || db.getWorkspacesForUser(user.id)[0];
+  const workspace = (await db.getWorkspaceBySlug(workspaceSlug))
+    || (await db.getWorkspacesForUser(user.id))[0];
 
   if (!workspace) return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
 
-  const events = db.getUserActivity(workspace.id, decodeURIComponent(distinctId));
+  const events = await db.getUserActivity(workspace.id, decodeURIComponent(distinctId));
   return NextResponse.json({ events, distinctId });
 }

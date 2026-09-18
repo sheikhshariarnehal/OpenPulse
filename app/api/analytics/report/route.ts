@@ -11,13 +11,13 @@ export async function GET(req: NextRequest) {
   const appId = searchParams.get('appId') || undefined;
   const days = parseInt(searchParams.get('days') || '30', 10);
 
-  const workspace = db.getWorkspaceBySlug(workspaceSlug)
-    || db.getWorkspacesForUser(user.id)[0];
+  const workspace = (await db.getWorkspaceBySlug(workspaceSlug))
+    || (await db.getWorkspacesForUser(user.id))[0];
 
   if (!workspace) return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
 
-  const report = db.getAnalyticsReport(workspace.id, { days, appId });
-  const apps = db.getAppsForWorkspace(workspace.id);
+  const report = await db.getAnalyticsReport(workspace.id, { days, appId });
+  const apps = await db.getAppsForWorkspace(workspace.id);
 
   return NextResponse.json({ report, apps, workspace });
 }

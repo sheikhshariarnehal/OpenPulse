@@ -12,10 +12,10 @@ export default async function DashboardLayout({
     redirect('/login');
   }
 
-  const workspaces = db.getWorkspacesForUser(user.id);
+  const workspaces = await db.getWorkspacesForUser(user.id);
   if (workspaces.length === 0) {
-    const ws = db.createWorkspace(user.id, `${user.name}'s Workspace`, 'personal-workspace');
-    db.createApp(ws.id, 'Primary Web App', 'web', 'nextjs');
+    const ws = await db.createWorkspace(user.id, `${user.name}'s Workspace`, 'personal-workspace');
+    await db.createApp(ws.id, 'Primary Web App', 'web', 'nextjs');
     redirect(`/${ws.slug}`);
   }
 

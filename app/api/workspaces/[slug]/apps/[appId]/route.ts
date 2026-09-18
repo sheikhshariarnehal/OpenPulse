@@ -10,16 +10,16 @@ export async function DELETE(
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const workspace = db.getWorkspaceBySlug(slug);
+  const workspace = await db.getWorkspaceBySlug(slug);
   if (!workspace || workspace.ownerId !== user.id) {
     return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
   }
 
-  const app = db.getAppById(appId);
+  const app = await db.getAppById(appId);
   if (!app || app.workspaceId !== workspace.id) {
     return NextResponse.json({ error: 'App not found' }, { status: 404 });
   }
 
-  db.deleteApp(appId);
+  await db.deleteApp(appId);
   return NextResponse.json({ success: true });
 }

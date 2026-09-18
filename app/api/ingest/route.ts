@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let app = db.getAppByApiKey(apiKey);
+    let app = await db.getAppByApiKey(apiKey);
     if (!app && apiKey === 'op_live_931be7475138b7a5888fd00589f5567c') {
       app = {
         id: 'app_aabeba84',
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
     const endTime = performance.now();
     const latencyMs = parseFloat((endTime - startTime + Math.random() * 0.3).toFixed(2));
 
-    const recorded = db.recordEvent({
+    const recorded = await db.recordEvent({
       workspaceId: app.workspaceId,
       appId: app.id,
       event: eventName,
@@ -86,28 +86,6 @@ export async function POST(req: NextRequest) {
       clientIp: clientIp.split(',')[0].trim(),
       userAgent
     });
-
-    // Directly persist to Supabase PostgreSQL table telemetry_events
-    try {
-      await prisma.telemetryEventMirror.create({
-        data: {
-          id: recorded.id,
-          workspaceId: recorded.workspaceId,
-          appId: recorded.appId,
-          event: recorded.event,
-          distinctId: recorded.distinctId,
-          properties: JSON.stringify(recorded.properties || {}),
-          timestamp: new Date(recorded.timestamp),
-          latencyMs: recorded.latencyMs,
-          status: recorded.status,
-          shard: recorded.shard,
-          clientIp: recorded.clientIp,
-          userAgent: recorded.userAgent
-        }
-      });
-    } catch (e) {
-      // Non-blocking fallback
-    }
 
     return NextResponse.json(
       {

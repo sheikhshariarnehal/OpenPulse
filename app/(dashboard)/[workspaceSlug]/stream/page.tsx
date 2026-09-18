@@ -14,11 +14,11 @@ export default async function RealtimeStreamPage({
   const user = await getCurrentUser();
   if (!user) return notFound();
 
-  const workspaces = db.getWorkspacesForUser(user.id);
-  const currentWs = db.getWorkspaceBySlug(workspaceSlug);
+  const workspaces = await db.getWorkspacesForUser(user.id);
+  const currentWs = await db.getWorkspaceBySlug(workspaceSlug);
   if (!currentWs) return notFound();
 
-  const events = db.getEvents(currentWs.id, 50);
+  const events = await db.getEvents(currentWs.id, 50);
 
   return (
     <>

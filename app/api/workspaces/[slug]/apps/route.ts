@@ -12,12 +12,12 @@ export async function GET(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const workspace = db.getWorkspaceBySlug(slug);
+  const workspace = await db.getWorkspaceBySlug(slug);
   if (!workspace || workspace.ownerId !== user.id) {
     return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
   }
 
-  const apps = db.getAppsForWorkspace(workspace.id);
+  const apps = await db.getAppsForWorkspace(workspace.id);
   return NextResponse.json({ workspace, apps });
 }
 
@@ -31,7 +31,7 @@ export async function POST(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const workspace = db.getWorkspaceBySlug(slug);
+  const workspace = await db.getWorkspaceBySlug(slug);
   if (!workspace || workspace.ownerId !== user.id) {
     return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
   }
@@ -44,7 +44,7 @@ export async function POST(
       return NextResponse.json({ error: 'Name and platform are required.' }, { status: 400 });
     }
 
-    const app = db.createApp(workspace.id, name.trim(), platform, framework || 'standard');
+    const app = await db.createApp(workspace.id, name.trim(), platform, framework || 'standard');
     return NextResponse.json({ success: true, app });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Failed to create app' }, { status: 400 });

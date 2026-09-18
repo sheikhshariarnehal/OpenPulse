@@ -14,9 +14,9 @@ export async function GET(req: NextRequest) {
 
   let workspace;
   if (workspaceSlug) {
-    workspace = db.getWorkspaceBySlug(workspaceSlug);
+    workspace = await db.getWorkspaceBySlug(workspaceSlug);
   } else {
-    const userWorkspaces = db.getWorkspacesForUser(user.id);
+    const userWorkspaces = await db.getWorkspacesForUser(user.id);
     workspace = userWorkspaces[0];
   }
 
@@ -24,6 +24,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
   }
 
-  const events = db.getEvents(workspace.id, limit);
+  const events = await db.getEvents(workspace.id, limit);
   return NextResponse.json({ events });
 }

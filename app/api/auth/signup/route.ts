@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Password must be at least 6 characters long.' }, { status: 400 });
     }
 
-    const { user, defaultWorkspace, defaultApp } = db.createUser(name.trim(), email.trim(), password);
+    const { user, defaultWorkspace, defaultApp } = await db.createUser(name.trim(), email.trim(), password);
     const token = createSessionToken(user.id, user.email);
 
     const response = NextResponse.json({

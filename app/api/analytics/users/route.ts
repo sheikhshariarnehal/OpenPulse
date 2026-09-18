@@ -11,11 +11,11 @@ export async function GET(req: NextRequest) {
   const appId = searchParams.get('appId') || undefined;
   const limit = parseInt(searchParams.get('limit') || '100', 10);
 
-  const workspace = db.getWorkspaceBySlug(workspaceSlug)
-    || db.getWorkspacesForUser(user.id)[0];
+  const workspace = (await db.getWorkspaceBySlug(workspaceSlug))
+    || (await db.getWorkspacesForUser(user.id))[0];
 
   if (!workspace) return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
 
-  const users = db.getUsersList(workspace.id, { appId, limit });
+  const users = await db.getUsersList(workspace.id, { appId, limit });
   return NextResponse.json({ users });
 }

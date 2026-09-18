@@ -14,8 +14,8 @@ export default async function AnalyticsUsersPage({
   const user = await getCurrentUser();
   if (!user) return notFound();
 
-  const workspaces = db.getWorkspacesForUser(user.id);
-  const currentWs = db.getWorkspaceBySlug(workspaceSlug);
+  const workspaces = await db.getWorkspacesForUser(user.id);
+  const currentWs = await db.getWorkspaceBySlug(workspaceSlug);
   if (!currentWs) return notFound();
 
   return (

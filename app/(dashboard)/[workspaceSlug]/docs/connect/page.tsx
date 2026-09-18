@@ -18,15 +18,15 @@ export default async function ConnectDocsPage({
   const user = await getCurrentUser();
   if (!user) return notFound();
 
-  const workspaces = db.getWorkspacesForUser(user.id);
-  const currentWs = db.getWorkspaceBySlug(workspaceSlug);
+  const workspaces = await db.getWorkspacesForUser(user.id);
+  const currentWs = await db.getWorkspaceBySlug(workspaceSlug);
   if (!currentWs) return notFound();
 
-  const apps = db.getAppsForWorkspace(currentWs.id);
+  const apps = await db.getAppsForWorkspace(currentWs.id);
 
   let activeApp = apps.find(a => a.id === queryAppId) || apps[0];
   if (!activeApp) {
-    activeApp = db.createApp(currentWs.id, 'Primary Web App', 'web', 'nextjs');
+    activeApp = await db.createApp(currentWs.id, 'Primary Web App', 'web', 'nextjs');
     apps.push(activeApp);
   }
 

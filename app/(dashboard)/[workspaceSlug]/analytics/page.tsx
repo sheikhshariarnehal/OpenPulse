@@ -14,11 +14,11 @@ export default async function AnalyticsPage({
   const user = await getCurrentUser();
   if (!user) return notFound();
 
-  const workspaces = db.getWorkspacesForUser(user.id);
-  const currentWs = db.getWorkspaceBySlug(workspaceSlug);
+  const workspaces = await db.getWorkspacesForUser(user.id);
+  const currentWs = await db.getWorkspaceBySlug(workspaceSlug);
   if (!currentWs) return notFound();
 
-  const apps = db.getAppsForWorkspace(currentWs.id);
+  const apps = await db.getAppsForWorkspace(currentWs.id);
 
   return (
     <>
